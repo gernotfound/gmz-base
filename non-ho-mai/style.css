@@ -1,0 +1,109 @@
+/* Prevenire il "bounce" scroll su iOS e il refresh in tirata (pull-to-refresh) */
+body {
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent; /* Rimuove il flash blu al tap su mobile */
+}
+
+/* Supporto per le Safe Area di iOS/Android (Notch e Home Indicator) */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pl-safe { padding-left: env(safe-area-inset-left); }
+.pr-safe { padding-right: env(safe-area-inset-right); }
+
+/* Stili per le card delle categorie */
+.category-card {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.category-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Stato attivo/selezionato delle categorie */
+.category-checkbox:checked + i + span,
+.category-checkbox:checked + i {
+    filter: drop-shadow(0 0 8px currentColor);
+}
+
+.category-card[data-category="Hot"]:has(input:checked) {
+    border-color: #ef4444; /* red-500 */
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.category-card[data-category="Love"]:has(input:checked) {
+    border-color: #ec4899; /* pink-500 */
+    background-color: rgba(236, 72, 153, 0.1);
+}
+
+.category-card[data-category="Situazioni"]:has(input:checked) {
+    border-color: #f59e0b; /* amber-500 */
+    background-color: rgba(245, 158, 11, 0.1);
+}
+
+.category-card[data-category="Imbarazzo"]:has(input:checked) {
+    border-color: #8b5cf6; /* violet-500 */
+    background-color: rgba(139, 92, 246, 0.1);
+}
+
+.category-card[data-category="Social"]:has(input:checked) {
+    border-color: #0ea5e9; /* sky-500 */
+    background-color: rgba(14, 165, 233, 0.1);
+}
+
+.category-card[data-category="Confini"]:has(input:checked) {
+    border-color: #10b981; /* emerald-500 */
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+/* Fallback CSS per i browser che non supportano :has() (es. vecchi Safari) */
+.category-card.selected-Hot {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+}
+.category-card.selected-Love {
+    border-color: #ec4899;
+    background-color: rgba(236, 72, 153, 0.1);
+}
+.category-card.selected-Situazioni {
+    border-color: #f59e0b;
+    background-color: rgba(245, 158, 11, 0.1);
+}
+.category-card.selected-Imbarazzo {
+    border-color: #8b5cf6;
+    background-color: rgba(139, 92, 246, 0.1);
+}
+.category-card.selected-Social {
+    border-color: #0ea5e9;
+    background-color: rgba(14, 165, 233, 0.1);
+}
+.category-card.selected-Confini {
+    border-color: #10b981;
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+/* Animazione di testo al cambio della frase */
+.fade-in-text {
+    animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Ottimizzazione del rendering (hardware acceleration) */
+.will-change-transform {
+    will-change: transform, opacity;
+}
+
+/* Disabilita la selezione testo e doppi tap sui pulsanti/elementi di gioco */
+button, #tap-area {
+    user-select: none;
+    touch-action: manipulation; /* Evita zoom accidentali col doppio tap rapido */
+}

@@ -1,0 +1,22 @@
+{
+  "name": "Non Ho Mai - Il Gioco",
+  "short_name": "Non Ho Mai",
+  "description": "Il classico gioco da fare con gli amici, con centinaia di frasi pronte!",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#111827",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
