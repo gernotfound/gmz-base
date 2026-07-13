@@ -3,7 +3,7 @@ let board = [], peer = null, conn = null, isHost = false, myTurn = false, myPlay
 
 document.addEventListener('DOMContentLoaded', () => { 
     initBoardStructure(); 
-    initNetworkConfiguration(); 
+    initNetwork(); 
 });
 
 function initBoardStructure() {
@@ -19,60 +19,58 @@ function initBoardStructure() {
     }
 }
 
-function initNetworkConfiguration() {
+function initNetwork() {
     const displayId = Math.random().toString(36).substring(2, 6).toUpperCase();
     const actualId = 'F4-' + displayId; 
     
-    // Inizializzazione più robusta
+    // Inizializzazione PeerJS
     peer = new Peer(actualId);
     
-    const joinId = new URLSearchParams(window.location.search).get('id');
-
-    // Feedback di stato iniziale
-    document.getElementById('status-box').innerText = "Inizializzazione rete...";
-
-    peer.on('open', id => {
-        console.log('Peer pronto con ID:', id);
-        document.getElementById('setup-panel').classList.remove('hidden');
-        
-        if (joinId) {
-            document.getElementById('host-section').classList.add('hidden');
-            document.getElementById('divider-section').classList.add('hidden');
-            document.getElementById('guest-label').classList.remove('hidden');
-            
-            document.getElementById('status-box').innerText = "Connessione automatica in corso...";
-            document.getElementById('remote-id').value = joinId;
-            
-            // Ritardo necessario per garantire che i server siano allineati
-            setTimeout(() => {
-                connectToPeer();
-            }, 1000);
-
-        } else {
-            document.getElementById('status-box').innerText = "Pronto! In attesa di avversario.";
-            document.getElementById('my-id').innerText = displayId;
-            generatedGameUrl = window.location.href.split('?')[0] + '?id=' + displayId;
-            new QRCode(document.getElementById('qrcode-box'), { text: generatedGameUrl, width: 140, height: 140 });
-        }
+    // Evento fondamentale: non facciamo NULLA finché non siamo connessi al server di signaling
+    peer.on('open', (id) => {
+        console.log('Server di signaling connesso. ID:', id);
+        setupUI(displayId);
     });
 
     peer.on('error', (err) => {
-        document.getElementById('status-box').innerText = "Errore: " + err.type;
+        document.getElementById('status-box').innerText = "Errore di connessione: " + err.type;
         console.error("PeerJS Error:", err);
     });
 
-    peer.on('connection', connection => { 
+    peer.on('connection', (connection) => { 
         if (conn) { connection.close(); return; } 
         isHost = true; myPlayerNum = 1; myTurn = true; 
         bindConnectionEvents(connection); 
     });
 }
 
+function setupUI(displayId) {
+    document.getElementById('setup-panel').classList.remove('hidden');
+    const joinId = new URLSearchParams(window.location.search).get('id');
+
+    if (joinId) {
+        // Modalità Guest
+        document.getElementById('host-section').classList.add('hidden');
+        document.getElementById('divider-section').classList.add('hidden');
+        document.getElementById('guest-label').classList.remove('hidden');
+        document.getElementById('remote-id').value = joinId;
+        document.getElementById('status-box').innerText = "Pronto alla connessione.";
+        // Connessione ritardata per permettere il rendering
+        setTimeout(connectToPeer, 500); 
+    } else {
+        // Modalità Host
+        document.getElementById('status-box').innerText = "In attesa di un giocatore...";
+        document.getElementById('my-id').innerText = displayId;
+        generatedGameUrl = window.location.href.split('?')[0] + '?id=' + displayId;
+        new QRCode(document.getElementById('qrcode-box'), { text: generatedGameUrl, width: 140, height: 140 });
+    }
+}
+
 function connectToPeer() {
     const rawId = document.getElementById('remote-id').value.trim().toUpperCase();
-    if (!rawId) { alert("Inserisci codice!"); return; }
+    if (!rawId) return;
     
-    document.getElementById('status-box').innerText = "Tentativo di connessione...";
+    document.getElementById('status-box').innerText = "Connessione in corso...";
     conn = peer.connect('F4-' + rawId);
     isHost = false; myPlayerNum = 2; myTurn = false;
     bindConnectionEvents(conn);
@@ -83,8 +81,8 @@ function bindConnectionEvents(connection) {
     conn.on('open', () => { 
         document.getElementById('setup-panel').classList.add('hidden'); 
         document.getElementById('game-area').classList.remove('hidden'); 
-        document.getElementById('status-box').innerText = "Partita iniziata";
-        gameActive = true; synchronizeUI(); 
+        gameActive = true; 
+        synchronizeUI(); 
     });
     conn.on('data', data => { 
         if (data.type === 'move') { processMove(data.col, data.playerNum); myTurn = true; synchronizeUI(); } 
@@ -92,8 +90,7 @@ function bindConnectionEvents(connection) {
     });
     conn.on('close', () => { 
         gameActive = false; 
-        document.getElementById('status-box').innerText = "Connessione persa";
-        document.getElementById('turn-text').innerText = "L'avversario è uscito."; 
+        document.getElementById('turn-text').innerText = "Avversario disconnesso."; 
     });
 }
 
@@ -123,8 +120,16 @@ function processMove(col, playerNum) {
 function synchronizeUI() {
     const indicatorDot = document.getElementById('player-indicator-dot');
     const turnText = document.getElementById('turn-text');
-    indicatorDot.className = `w-4 h-4 rounded-full transition-opacity duration-300 ${myTurn ? (myPlayerNum === 1 ? 'player1' : 'player2') : 'bg-gray-600'}`;
+    
+    // Mantiene coerenza cromatica con i gradienti di stile
+    const myColorClass = myPlayerNum === 1 ? 'player1' : 'player2';
+    const myTextClass = myPlayerNum === 1 ? 'text-gradient-p1' : 'text-gradient-p2';
+    
+    indicatorDot.className = `w-4 h-4 rounded-full transition-opacity duration-300 ${myColorClass}`;
+    turnText.className = `font-bold text-lg transition-opacity duration-300 ${myTextClass}`;
+    
     turnText.innerText = myTurn ? "Tocca a te" : "Attendi...";
+    indicatorDot.style.opacity = myTurn ? "1" : "0.4";
     turnText.style.opacity = myTurn ? "1" : "0.6";
 }
 
@@ -134,9 +139,11 @@ function terminateGame(winnerNum) {
     const text = document.getElementById('overlay-text');
     overlay.classList.remove('hidden');
     text.className = 'overlay-text-base';
+    
     if (winnerNum === 0) { text.innerText = "PAREGGIO"; text.classList.add('text-draw'); }
     else if (winnerNum === myPlayerNum) { text.innerHTML = "HAI<br>VINTO"; text.classList.add('text-win'); }
     else { text.innerHTML = "HAI<br>PERSO"; text.classList.add('text-lose'); }
+    
     document.getElementById('btn-restart').classList.remove('hidden');
     document.getElementById('turn-text').innerText = "Attendi...";
 }
