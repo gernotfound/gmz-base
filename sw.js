@@ -1,7 +1,7 @@
 // =========================================================================
 // VERSIONE DELL'APPLICAZIONE
 // =========================================================================
-// Incrementata a 1.1.0 per includere il nuovo gioco "Duce o Non Duce"
+// Incrementata a 1.2.0 per includere il nuovo gioco "Duce o Non Duce"
 // e attivare il sistema di notifica automatica sui telefoni dei ragazzi.
 const APP_VERSION = '1.2.0'; 
 const CACHE_NAME = `gmz-base-${APP_VERSION}`;

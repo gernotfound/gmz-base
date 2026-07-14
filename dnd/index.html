@@ -55,6 +55,19 @@
         button {
             touch-action: manipulation;
         }
+
+        /* Classi speciali per capovolgere i caratteri con allineamento tipografico millimetrico */
+        .flipped-n {
+            display: inline-block;
+            transform: scaleX(-1);
+        }
+        .flipped-u {
+            display: inline-block;
+            transform: scaleY(-1);
+            vertical-align: bottom;
+            position: relative;
+            top: -0.11em; /* Corregge la discesa tipografica dovuta al flip */
+        }
     </style>
 </head>
 <body class="bg-dark text-white min-h-[100dvh] w-full font-sans flex flex-col items-center justify-center pt-safe pb-safe px-6 select-none animate-fadeIn">
@@ -67,7 +80,7 @@
     <!-- AREA GIOCO PRINCIPALE -->
     <main id="game-screen" class="w-full max-w-md flex flex-col items-center hidden">
         
-        <!-- Intestazione stilizzata ripristinata (Duce --- o --- Non Duce) -->
+        <!-- Intestazione stilizzata ripristinata con allineamento tipografico -->
         <header class="mb-6 w-full text-center mt-12">
             <h1 class="text-4xl font-black tracking-widest text-white drop-shadow-[0_4px_12px_rgba(255,255,255,0.15)] uppercase">
                 DUCE
@@ -78,7 +91,7 @@
                 <div class="h-px bg-gray-700/50 w-20"></div>
             </div>
             <h1 class="text-4xl font-black tracking-widest text-white drop-shadow-[0_4px_12px_rgba(255,255,255,0.15)] uppercase">
-                <span class="inline-block -scale-x-100">N</span>O<span class="inline-block -scale-x-100">N</span> D<span class="inline-block -scale-y-100">U</span>CE
+                <span class="flipped-n">N</span>O<span class="flipped-n">N</span> D<span class="flipped-u">U</span>CE
             </h1>
         </header>
 
