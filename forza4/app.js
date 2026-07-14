@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initNetworkConfiguration();
 });
 
+// Inizializza la struttura logica e visiva della griglia di gioco
 function initBoardStructure() {
     const boardEl = document.getElementById('board');
     boardEl.innerHTML = '';
@@ -32,6 +33,7 @@ function initBoardStructure() {
     }
 }
 
+// Configura la connessione di rete P2P (PeerJS)
 function initNetworkConfiguration() {
     const displayId = Math.random().toString(36).substring(2, 6).toUpperCase();
     const actualId = 'F4-' + displayId; 
@@ -45,6 +47,7 @@ function initNetworkConfiguration() {
         document.getElementById('setup-panel').classList.remove('hidden');
         
         if (joinId) {
+            // Se l'utente entra tramite link d'invito (Guest)
             document.getElementById('host-section').classList.add('hidden');
             document.getElementById('divider-section').classList.add('hidden');
             document.getElementById('guest-label').classList.remove('hidden');
@@ -52,11 +55,13 @@ function initNetworkConfiguration() {
             document.getElementById('status-box').innerText = "Accesso alla partita...";
             document.getElementById('remote-id').value = joinId;
             
+            // Tenta la connessione automatica dopo un breve delay per stabilità
             setTimeout(() => {
                 document.getElementById('btn-connect').click();
             }, 300);
 
         } else {
+            // Se l'utente è l'iniziatore della partita (Host)
             document.getElementById('status-box').innerText = "In attesa di un giocatore...";
             document.getElementById('my-id').innerText = displayId;
             
@@ -84,6 +89,7 @@ function initNetworkConfiguration() {
     });
 }
 
+// Tenta di connettersi ad un host inserendo manualmente il codice
 function connectToPeer() {
     const rawId = document.getElementById('remote-id').value.trim().toUpperCase();
     if (!rawId || rawId.length < 4) {
@@ -108,6 +114,7 @@ function connectToPeer() {
     }, 5000);
 }
 
+// Gestisce gli eventi legati allo scambio dati sul socket P2P
 function bindConnectionEvents(connection) {
     conn = connection;
     
@@ -117,6 +124,11 @@ function bindConnectionEvents(connection) {
         document.getElementById('status-box').innerText = "Partita in corso";
         document.getElementById('status-box').classList.remove('text-brand-hot');
         gameActive = true;
+        
+        // Nasconde il pulsante "Torna alla Home" per evitare uscite accidentali
+        const backHubBtn = document.getElementById('btn-back-hub');
+        if (backHubBtn) backHubBtn.classList.add('hidden');
+
         synchronizeUI();
         window.history.replaceState({}, document.title, window.location.pathname);
     });
@@ -136,6 +148,7 @@ function bindConnectionEvents(connection) {
     conn.on('close', handleDisconnect);
 }
 
+// Gestione della disconnessione improvvisa di uno dei giocatori
 function handleDisconnect() {
     gameActive = false;
     document.getElementById('status-box').innerText = "Connessione persa";
@@ -143,12 +156,13 @@ function handleDisconnect() {
     
     const turnText = document.getElementById('turn-text');
     turnText.innerText = "L'avversario è uscito.";
-    turnText.className = "font-bold text-lg text-gray-400 transition-opacity duration-300";
+    turnText.className = "font-extrabold text-lg text-gray-400 transition-opacity duration-300";
     document.getElementById('player-indicator-dot').style.opacity = "0.4";
     
     document.getElementById('btn-restart').classList.add('hidden');
 }
 
+// Seleziona la colonna su cui far cadere il gettone
 function handleColumnSelection(col) {
     if (!gameActive || !myTurn) return;
     
@@ -159,6 +173,7 @@ function handleColumnSelection(col) {
     }
 }
 
+// Gestisce lo scivolamento logico e visivo del gettone
 function processMove(col, playerNum) {
     for (let r = rows - 1; r >= 0; r--) {
         if (board[r][col] === 0) {
@@ -182,6 +197,7 @@ function processMove(col, playerNum) {
     return false;
 }
 
+// Aggiorna l'indicatore di turno e i colori a schermo
 function synchronizeUI() {
     const indicatorDot = document.getElementById('player-indicator-dot');
     const turnText = document.getElementById('turn-text');
@@ -190,7 +206,7 @@ function synchronizeUI() {
     const myTextClass = myPlayerNum === 1 ? 'text-gradient-p1' : 'text-gradient-p2';
     
     indicatorDot.className = `w-4 h-4 rounded-full shadow-inner transition-opacity duration-300 ${myColorClass}`;
-    turnText.className = `font-bold text-lg transition-opacity duration-300 ${myTextClass}`;
+    turnText.className = `font-extrabold text-lg transition-opacity duration-300 ${myTextClass}`;
 
     if (myTurn) {
         turnText.innerText = "Tocca a te";
@@ -203,6 +219,7 @@ function synchronizeUI() {
     }
 }
 
+// Conclude la partita mostrando la schermata di vittoria/sconfitta/pareggio
 function terminateGame(winnerNum) {
     gameActive = false;
     const turnText = document.getElementById('turn-text');
@@ -213,14 +230,14 @@ function terminateGame(winnerNum) {
     overlay.className = 'absolute inset-0 z-10 flex flex-col items-center justify-center transition-all duration-500 overflow-hidden pointer-events-none';
     overlayText.className = 'overlay-text-base';
     
-    // Forzatura inattiva dell'indicatore di turno
+    // Disattiva momentaneamente gli indicatori di turno attivi
     turnText.innerText = "Attendi...";
-    turnText.className = `font-bold text-lg transition-opacity duration-300 text-gradient-p${myPlayerNum}`;
+    turnText.className = `font-extrabold text-lg transition-opacity duration-300 text-gradient-p${myPlayerNum}`;
     turnText.style.opacity = "0.6";
     indicatorDot.style.opacity = "0.4";
 
     if (winnerNum === 0) {
-        turnText.className = "font-bold text-lg text-gray-400 transition-opacity duration-300";
+        turnText.className = "font-extrabold text-lg text-gray-400 transition-opacity duration-300";
         overlayText.innerText = "PAREGGIO";
         overlayText.classList.add('text-draw');
     } else if (winnerNum === myPlayerNum) {
@@ -234,6 +251,7 @@ function terminateGame(winnerNum) {
     document.getElementById('btn-restart').classList.remove('hidden');
 }
 
+// Invia una richiesta di riavvio all'avversario
 function requestRestart() {
     if (!conn || !conn.open) {
         alert("La connessione con l'avversario è interrotta.");
@@ -243,6 +261,7 @@ function requestRestart() {
     executeRestart();
 }
 
+// Pulisce la tavola e fa partire un nuovo round
 function executeRestart() {
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
@@ -259,10 +278,12 @@ function executeRestart() {
     synchronizeUI();
 }
 
+// Interrompe la sessione e torna alla schermata di configurazione ricaricando la pagina
 function exitToMenu() {
     window.location.href = window.location.href.split('?')[0];
 }
 
+// Algoritmo di controllo allineamento a 4 elementi in tutte le direzioni
 function evaluateWinConditions(r, c, p) {
     const axes = [ [[0, 1], [0, -1]], [[1, 0], [-1, 0]], [[1, 1], [-1, -1]], [[1, -1], [-1, 1]] ];
     for (let axis of axes) {
@@ -281,11 +302,13 @@ function evaluateWinConditions(r, c, p) {
     return false;
 }
 
+// Verifica se la scacchiera è completamente piena (Pareggio)
 function evaluateDrawCondition() {
     for (let c = 0; c < cols; c++) if (board[0][c] === 0) return false;
     return true;
 }
 
+// Copia il link di invito negli appunti dell'utente per una facile condivisione
 function copyLink() {
     if (generatedGameUrl) {
         navigator.clipboard.writeText(generatedGameUrl).then(() => {

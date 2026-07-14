@@ -1,11 +1,11 @@
 {
-  "name": "Non Ho Mai - Il Gioco",
-  "short_name": "Non Ho Mai",
-  "description": "Il classico gioco da fare con gli amici, con centinaia di frasi pronte!",
+  "name": "GMZ Base",
+  "short_name": "GMZ Base",
+  "description": "La tua sala giochi tascabile con tanti minigiochi entusiasmanti.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
-  "theme_color": "#111827",
+  "theme_color": "#0f172a",
   "orientation": "portrait",
   "icons": [
     {
