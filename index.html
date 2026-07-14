@@ -53,7 +53,7 @@
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 24px); }
     </style>
 </head>
-<body class="bg-dark text-white min-h-[100dvh] w-full font-sans flex flex-col items-center pt-safe pb-safe px-6 justify-between select-none">
+<body class="bg-dark text-white min-h-[100dvh] w-full font-sans flex flex-col items-center pt-safe pb-safe px-6 justify-center gap-y-4 select-none">
 
     <!-- HEADER & TITOLO -->
     <header class="text-center mt-6 w-full max-w-2xl shrink-0">
@@ -72,7 +72,7 @@
     </header>
 
     <!-- GRIGLIA MINIGIOCHI -->
-    <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 my-8 flex-grow justify-center items-center">
+    <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 my-4 flex-grow justify-center items-center">
         
         <!-- CARD: FORZA 4 -->
         <a href="./forza4/index.html" class="group outline-none w-full">
@@ -140,11 +140,6 @@
         </button>
     </div>
 
-    <!-- FOOTER -->
-    <footer class="mt-6 text-gray-600 text-[11px] font-bold tracking-wide uppercase shrink-0 text-center">
-        <p>&copy; 2026 GMZ Base. Powered by GitHub Pages.</p>
-    </footer>
-
     <!-- LOGICHE PWA (Service Worker, Update Monitor e Installatore) -->
     <script>
         // 1. Registrazione e Monitoraggio Aggiornamenti del Service Worker
@@ -162,25 +157,23 @@
 
                             toast.classList.remove('hidden');
                             btn.onclick = () => {
-                                // Ordina al service worker in attesa di subentrare
                                 waitingWorker.postMessage({ type: 'SKIP_WAITING' });
                                 toast.classList.add('hidden');
                             };
                         };
 
-                        // A. Se c'è già un service worker aggiornato in attesa (es. l'utente riapre l'app)
+                        // A. Se c'è già un service worker in attesa
                         if (reg.waiting) {
                             showUpdateToast(reg.waiting);
                         }
 
-                        // B. Rileva se un nuovo service worker viene trovato e sta effettuando l'installazione
+                        // B. Se viene trovato un nuovo service worker
                         reg.addEventListener('updatefound', () => {
                             const installingWorker = reg.installing;
                             if (!installingWorker) return;
 
                             installingWorker.addEventListener('statechange', () => {
                                 if (installingWorker.state === 'installed') {
-                                    // Se c'è un controller attivo, significa che l'app era già aperta e stiamo caricando una versione successiva
                                     if (navigator.serviceWorker.controller) {
                                         showUpdateToast(installingWorker);
                                     }
@@ -191,7 +184,7 @@
                     .catch(err => console.warn('Registrazione del Service Worker fallita:', err));
             });
 
-            // C. Ricarica automaticamente la pagina quando il nuovo Service Worker prende effettivamente il controllo
+            // C. Ricarica la pagina quando il nuovo Service Worker si attiva
             let refreshing = false;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (refreshing) return;
@@ -215,7 +208,7 @@
             installBtn.classList.add('hidden');
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
-            console.log(`Risposta dell'utente all'installazione: ${outcome}`);
+            console.log(`Risposta all'installazione: ${outcome}`);
             deferredPrompt = null;
         });
 

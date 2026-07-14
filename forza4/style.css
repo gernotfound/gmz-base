@@ -6,6 +6,7 @@ body {
 .pt-safe { padding-top: env(safe-area-inset-top, 15px); }
 .pb-safe { padding-bottom: env(safe-area-inset-bottom, 15px); }
 
+/* Nasconde le barre di scorrimento su tutti i browser */
 .no-scrollbar::-webkit-scrollbar {
     display: none;
 }
@@ -14,25 +15,22 @@ body {
     scrollbar-width: none;
 }
 
+/* Tavolo da gioco dinamico auto-adattivo */
 .board {
+    /* Calcolo fluido: garantisce che la scacchiera occupi al massimo il 92% della larghezza */
+    /* dello schermo sottraendo gap e padding, con un tetto limite di 46px a cella */
+    --cell-size: min(calc((92vw - 56px) / 7), 46px);
+    
     display: grid;
-    grid-template-columns: repeat(7, 42px);
-    grid-template-rows: repeat(6, 42px);
-    gap: 8px;
+    grid-template-columns: repeat(7, var(--cell-size));
+    grid-template-rows: repeat(6, var(--cell-size));
+    gap: 6px;
     background-color: #1f2937;
-    padding: 12px;
+    padding: 10px;
     border-radius: 16px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.1);
     border: 1px solid #374151;
-}
-
-@media(min-width: 400px) {
-    .board {
-        grid-template-columns: repeat(7, 50px);
-        grid-template-rows: repeat(6, 50px);
-        gap: 10px;
-        padding: 15px;
-    }
+    margin: 0 auto;
 }
 
 .cell {
@@ -44,6 +42,7 @@ body {
     overflow: visible;
 }
 
+/* Gettoni con animazione di caduta fluida */
 .token {
     position: absolute;
     top: 0; left: 0;
@@ -80,18 +79,15 @@ body {
     100% { transform: translateY(0); }
 }
 
+/* Scritta di vittoria/sconfitta proporzionata ed elastica */
 .overlay-text-base {
-    font-size: 3.2rem;
+    font-size: clamp(2.4rem, 10vw, 4rem);
     font-weight: 900;
     text-align: center;
     line-height: 1.1;
     transform: rotate(-6deg);
     text-transform: uppercase;
     pointer-events: none;
-}
-
-@media(min-width: 400px) {
-    .overlay-text-base { font-size: 4rem; }
 }
 
 .text-win {

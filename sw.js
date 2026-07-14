@@ -3,7 +3,7 @@
 // =========================================================================
 // Incrementa questo valore (es. '1.0.1', '1.0.2', etc.) ogni volta che
 // modifichi il codice di un file per forzare l'aggiornamento sui telefoni.
-const APP_VERSION = '1.0.0'; 
+const APP_VERSION = '1.1.0'; 
 const CACHE_NAME = `gmz-base-${APP_VERSION}`;
 // =========================================================================
 
