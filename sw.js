@@ -1,13 +1,13 @@
 // =========================================================================
 // VERSIONE DELL'APPLICAZIONE
 // =========================================================================
-// Incrementa questo valore (es. '1.0.1', '1.0.2', etc.) ogni volta che
-// modifichi il codice di un file per forzare l'aggiornamento sui telefoni.
+// Incrementata a 1.1.0 per includere il nuovo gioco "Duce o Non Duce"
+// e attivare il sistema di notifica automatica sui telefoni dei ragazzi.
 const APP_VERSION = '1.1.0'; 
 const CACHE_NAME = `gmz-base-${APP_VERSION}`;
 // =========================================================================
 
-// Lista delle risorse principali da salvare offline
+// Lista delle risorse principali di tutti i giochi da salvare offline
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -27,7 +27,12 @@ const ASSETS_TO_CACHE = [
     // Risorse di "Forza 4"
     './forza4/index.html',
     './forza4/style.css',
-    './forza4/app.js'
+    './forza4/app.js',
+
+    // Risorse di "Duce o Non Duce" (Aggiunte in v1.1.0)
+    './dnd/index.html',
+    './dnd/app.js',
+    './dnd/questions.js'
 ];
 
 // FASE DI INSTALLAZIONE: Salva i file in cache
@@ -39,8 +44,6 @@ self.addEventListener('install', event => {
                 return cache.addAll(ASSETS_TO_CACHE);
             })
     );
-    // Non forziamo più skipWaiting() automaticamente all'installazione,
-    // lasciamo che l'utente accetti l'aggiornamento dalla notifica a schermo.
 });
 
 // FASE DI ATTIVAZIONE: Rimuove le cache obsolete
