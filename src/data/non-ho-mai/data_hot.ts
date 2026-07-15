@@ -1,4 +1,4 @@
-const dataHot = [
+export const dataHot = [
     "Non ho mai baciato qualcuno al primo appuntamento.",
     "Non ho mai baciato qualcuno senza sapere nemmeno il suo cognome.",
     "Non ho mai baciato qualcuno in mezzo alla strada o sotto la pioggia.",

@@ -1,4 +1,4 @@
-const dataImbarazzo = [
+export const dataImbarazzo = [
     "Non ho mai salutato con entusiasmo qualcuno da lontano, per poi scoprire che non era chi pensavo.",
     "Non ho mai ricambiato un saluto con la mano, per poi accorgermi che la persona stava salutando qualcuno dietro di me.",
     "Non ho mai fatto finta di guardare intensamente il telefono per evitare di salutare un conoscente per strada.",

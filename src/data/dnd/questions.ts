@@ -678,4 +678,4 @@ const databaseFrasi = [
         author: "Mito Smentito / Falso storico", 
         context: "Nel 1937 il regime concesse la 'gratifica natalizia' solo agli impiegati industriali (colletti bianchi). L'estensione obbligatoria e universale a tutti gli operai avvenne solo con l'accordo del 27 ottobre 1946 sotto l'Italia repubblicana." 
     }
-];
+];export { databaseFrasi };

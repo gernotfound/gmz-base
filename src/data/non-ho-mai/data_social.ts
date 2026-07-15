@@ -1,4 +1,4 @@
-const dataSocial = [
+export const dataSocial = [
     "Non ho mai passato ore a fare 'scroll infinito' sui social perdendo completamente la cognizione del tempo.",
     "Non ho mai sbloccato il telefono solo per guardare l'ora e finito per chiudere Instagram mezz'ora dopo senza sapere che ore fossero.",
     "Non ho mai visualizzato un messaggio scomodo e finto di non averlo letto, rispondendo giorni dopo con 'Scusa, non mi era arrivata la notifica!'.",

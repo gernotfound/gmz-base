@@ -1,4 +1,4 @@
-const dataConfini = [
+export const dataConfini = [
     "Non ho mai detto di 'sì' a un favore o a un'uscita solo per pura e semplice paura di deludere qualcuno.",
     "Non ho mai ceduto alla pressione del gruppo facendo qualcosa che andava totalmente contro i miei princìpi.",
     "Non ho mai tollerato in silenzio un contatto fisico o un abbraccio che mi metteva profondamente a disagio.",

@@ -1,4 +1,4 @@
-const dataSituazioni = [
+export const dataSituazioni = [
     "Non ho mai scoreggiato in ascensore.",
     "Non ho mai sputato, per sbaglio, in faccia a qualcuno mentre parlavo.",
     "Non ho mai lasciato squillare il telefono ad alto volume in un momento solenne.",

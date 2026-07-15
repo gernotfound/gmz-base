@@ -1,4 +1,4 @@
-const dataLove = [
+export const dataLove = [
     "Non ho mai tradito in una relazione romantica.",
     "Non ho mai mandato un messaggio al mio ex da ubriaco.",
     "Non ho mai scritto al mio ex solo per nostalgia.",

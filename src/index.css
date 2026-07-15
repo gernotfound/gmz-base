@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+.pt-safe { padding-top: env(safe-area-inset-top, 24px); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 24px); }
+.pl-safe { padding-left: env(safe-area-inset-left, 24px); }
+.pr-safe { padding-right: env(safe-area-inset-right, 24px); }
+
+/* Effetto neon */
+.neon-glow {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+/* Utilities for Non Ho Mai */
+.category-checkbox:checked + i + span {
+  color: white;
+}
+.category-checkbox:checked ~ i {
+  transform: scale(1.1);
+}
+
+/* Utilities for Dnd */
+.flipped-n {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+.flipped-u {
+  display: inline-block;
+  transform: scaleY(-1);
+  vertical-align: bottom;
+  position: relative;
+  top: -0.11em;
+}
+
+/* Forza 4 Board overrides */
+.board {
+  display: grid;
+  grid-template-columns: repeat(7, 45px);
+  grid-template-rows: repeat(6, 45px);
+  gap: 8px;
+  background-color: #1e3a8a; /* Blue 900 */
+  padding: 12px;
+  border-radius: 16px;
+  box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.5), 0 10px 25px rgba(0,0,0,0.5);
+  border: 4px solid #172554;
+}
+@media (min-width: 400px) {
+  .board {
+      grid-template-columns: repeat(7, 50px);
+      grid-template-rows: repeat(6, 50px);
+      gap: 10px;
+      padding: 16px;
+  }
+}
+.cell {
+  width: 100%;
+  height: 100%;
+  background-color: #0f172a;
+  border-radius: 50%;
+  box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+.token {
+  width: 90%;
+  height: 90%;
+  border-radius: 50%;
+  position: absolute;
+  top: -300px;
+  animation: drop 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  box-shadow: inset 0 -4px 6px rgba(0,0,0,0.4), inset 0 4px 6px rgba(255,255,255,0.3), 0 4px 8px rgba(0,0,0,0.5);
+}
+@keyframes drop {
+  0% { transform: translateY(0); }
+  60% { transform: translateY(305px); }
+  80% { transform: translateY(280px); }
+  100% { transform: translateY(300px); top: 5%; }
+}
+.p1 {
+  background: radial-gradient(circle at 30% 30%, #fca5a5, #ef4444, #b91c1c);
+}
+.p2 {
+  background: radial-gradient(circle at 30% 30%, #fde047, #eab308, #a16207);
+}
