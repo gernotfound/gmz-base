@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Home as HomeIcon, Copy, Play, DoorOpen, RotateCcw, Check } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import Peer, { DataConnection } from 'peerjs';
@@ -11,7 +11,7 @@ const COLS = 7;
 type GameState = 'setup' | 'playing' | 'end';
 
 export default function Forza4() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const joinId = searchParams.get('id');
 
   const [gameState, setGameState] = useState<GameState>('setup');
@@ -26,14 +26,21 @@ export default function Forza4() {
   );
   
   const [isHost, setIsHost] = useState(false);
+  const isHostRef = useRef(false);
+  
   const [myPlayerNum, setMyPlayerNum] = useState(0);
+  const myPlayerNumRef = useRef(0);
+  
   const [myTurn, setMyTurn] = useState(false);
   const [winner, setWinner] = useState<number | null>(null); // 0 = draw
 
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
 
+  const joinIdRef = useRef(searchParams.get('id'));
+
   useEffect(() => {
+    const initialJoinId = joinIdRef.current;
     const displayId = Math.random().toString(36).substring(2, 6).toUpperCase();
     const actualId = 'F4-' + displayId;
     
@@ -41,11 +48,9 @@ export default function Forza4() {
     peerRef.current = peer;
 
     peer.on('open', () => {
-      if (joinId) {
+      if (initialJoinId) {
         setStatusText("Accesso alla partita...");
-        setRemoteId(joinId);
-        // We do not auto-connect to allow user to press 'connect', 
-        // but we could. For safety let's just let them press it.
+        setRemoteId(initialJoinId);
       } else {
         setStatusText("In attesa di un giocatore...");
         setMyId(displayId);
@@ -55,7 +60,9 @@ export default function Forza4() {
     peer.on('connection', conn => {
       if (connRef.current) { conn.close(); return; }
       setIsHost(true);
+      isHostRef.current = true;
       setMyPlayerNum(1);
+      myPlayerNumRef.current = 1;
       setMyTurn(true);
       bindConnectionEvents(conn);
     });
@@ -63,7 +70,7 @@ export default function Forza4() {
     return () => {
       peer.destroy();
     };
-  }, [joinId]);
+  }, []);
 
   const bindConnectionEvents = (conn: DataConnection) => {
     connRef.current = conn;
@@ -72,7 +79,7 @@ export default function Forza4() {
       setGameState('playing');
       setStatusText("Partita in corso");
       setStatusError(false);
-      window.history.replaceState({}, document.title, window.location.pathname);
+      setSearchParams({});
     });
 
     conn.on('data', (data: any) => {
@@ -104,7 +111,9 @@ export default function Forza4() {
     setStatusText("Connessione in corso...");
     setStatusError(false);
     setIsHost(false);
+    isHostRef.current = false;
     setMyPlayerNum(2);
+    myPlayerNumRef.current = 2;
     setMyTurn(false);
     
     const targetId = 'F4-' + remoteId.trim().toUpperCase();
@@ -120,35 +129,45 @@ export default function Forza4() {
   };
 
   const copyLink = () => {
-    const url = window.location.href.split('?')[0] + '?id=' + myId;
+    const url = window.location.origin + window.location.pathname + '#/forza4?id=' + myId;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
   };
 
+  const boardRef = useRef(board);
+  useEffect(() => {
+    boardRef.current = board;
+  }, [board]);
+
   const processMove = (col: number, playerNum: number) => {
-    setBoard(prevBoard => {
-      const newBoard = prevBoard.map(row => [...row]);
-      for (let r = ROWS - 1; r >= 0; r--) {
-        if (newBoard[r][col] === 0) {
-          newBoard[r][col] = playerNum;
-          
-          if (evaluateWinConditions(newBoard, r, col, playerNum)) {
-            setGameState('end');
-            setWinner(playerNum);
-          } else if (evaluateDrawCondition(newBoard)) {
-            setGameState('end');
-            setWinner(0);
-          } else {
-            // switch turn
-            setMyTurn(playerNum !== myPlayerNum);
-          }
-          break;
-        }
+    let rPlaced = -1;
+    let newBoard = [...boardRef.current];
+    
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (newBoard[r][col] === 0) {
+        newBoard = newBoard.map((row, index) => 
+          index === r ? [...row.slice(0, col), playerNum, ...row.slice(col + 1)] : row
+        );
+        rPlaced = r;
+        break;
       }
-      return newBoard;
-    });
+    }
+
+    if (rPlaced !== -1) {
+      setBoard(newBoard);
+      
+      if (evaluateWinConditions(newBoard, rPlaced, col, playerNum)) {
+        setGameState('end');
+        setWinner(playerNum);
+      } else if (evaluateDrawCondition(newBoard)) {
+        setGameState('end');
+        setWinner(0);
+      } else {
+        setMyTurn(playerNum !== myPlayerNumRef.current);
+      }
+    }
   };
 
   const handleColumnSelection = (col: number) => {
@@ -201,11 +220,13 @@ export default function Forza4() {
     setBoard(Array(ROWS).fill(null).map(() => Array(COLS).fill(0)));
     setWinner(null);
     setGameState('playing');
-    setMyTurn(isHost);
+    setMyTurn(isHostRef.current);
   };
 
+  const navigate = useNavigate();
+
   const exitToMenu = () => {
-    window.location.href = window.location.href.split('?')[0];
+    navigate('/');
   };
 
   return (
@@ -233,7 +254,7 @@ export default function Forza4() {
               <h2 className="text-5xl font-black text-white tracking-widest mb-4">{myId}</h2>
               
               <div className="bg-white p-3.5 rounded-2xl mb-5 shadow-inner border border-slate-200">
-                <QRCodeSVG value={window.location.href.split('?')[0] + '?id=' + myId} size={140} fgColor="#0f172a" />
+                <QRCodeSVG value={window.location.origin + window.location.pathname + '#/forza4?id=' + myId} size={140} fgColor="#0f172a" />
               </div>
               
               <button onClick={copyLink} className={clsx("w-full py-3 rounded-xl font-bold text-base shadow-md active:scale-95 transition-all flex justify-center items-center gap-2 border", copied ? 'bg-green-600 text-white border-green-500' : 'bg-slate-700/80 hover:bg-slate-700 text-white border-slate-600/30')}>
