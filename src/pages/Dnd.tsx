@@ -9,7 +9,7 @@ export default function Dnd() {
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(false);
   const [questions, setQuestions] = useState<typeof databaseFrasi>([]);
-  const totalQuestions = 20;
+  const [totalQuestions, setTotalQuestions] = useState(20);
 
   useEffect(() => {
     startGame();
@@ -17,7 +17,9 @@ export default function Dnd() {
 
   const startGame = () => {
     const shuffled = [...databaseFrasi].sort(() => 0.5 - Math.random());
-    setQuestions(shuffled.slice(0, totalQuestions));
+    const selected = shuffled.slice(0, 20);
+    setQuestions(selected);
+    setTotalQuestions(selected.length);
     setCurrentQuestionIndex(0);
     setScore(0);
     setGameState('playing');

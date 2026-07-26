@@ -312,7 +312,7 @@ export default function Forza4() {
               {board.map((row, r) => row.map((cell, c) => (
                 <div key={`${r}-${c}`} className="cell" onClick={() => handleColumnSelection(c)}>
                   {cell !== 0 && (
-                    <div className={clsx("token", cell === 1 ? 'p1' : 'p2')} style={{ animationDuration: '0s', top: '5%', transform: 'translateY(300px)' }}></div>
+                    <div className={clsx("token", cell === 1 ? 'p1' : 'p2')}></div>
                   )}
                 </div>
               )))}
