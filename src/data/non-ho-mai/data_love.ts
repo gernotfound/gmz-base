@@ -184,6 +184,6 @@ export const dataLove = [
     "Non ho mai creduto che amare significhi anche accettare di lasciare andare.",
     "Non ho mai avuto una cotta segreta per il partner di un mio amico/a.",
     "Non ho mai finto di amare qualcuno solo per non restare solo/a.",
-    "Non ho mai mentito dicendo "non sono pronto per una relazione" quando in realta non mi piaceva la persona.",
+    "Non ho mai mentito dicendo \"non sono pronto per una relazione\" quando in realta non mi piaceva la persona.",
     "Non ho mai perdonato un tradimento."
 ];

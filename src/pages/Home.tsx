@@ -80,6 +80,29 @@ export default function Home() {
             </div>
           </div>
         </Link>
+
+        {/* Duce o Non Duce - Pro */}
+        <Link to="/dnd-pro" className="group outline-none w-full block">
+          <div className="bg-slate-800/60 backdrop-blur-md p-8 rounded-[2rem] border border-slate-700/50 shadow-xl transition-all duration-300 group-hover:shadow-[0_20px_50px_rgba(245,158,11,0.4)] group-hover:border-orange-500/50 flex flex-col h-full transform group-hover:-translate-y-2 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-500/20 to-orange-600/20 rounded-bl-[100px] -z-10"></div>
+            <div className="flex items-center gap-5 mb-6">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-3xl shadow-lg border border-white/10 shrink-0 relative">
+                📸
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded rotate-12 shadow-sm">PRO</span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-white group-hover:text-orange-400 transition-colors">Duce o Non Duce Pro</h2>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-400 bg-orange-900/30 px-3 py-1 rounded-full mt-1 inline-block">Quiz Fotografico</span>
+              </div>
+            </div>
+            <p className="text-slate-400 text-sm leading-relaxed mb-8 flex-grow">
+              La versione fotografica di Duce o Non Duce! Riconosci le immagini e distingui i fatti veri. Aggiungi le tue foto!
+            </p>
+            <div className="w-full py-4 rounded-2xl bg-slate-700/80 text-center font-extrabold text-sm text-white group-hover:bg-gradient-to-r group-hover:from-orange-500 group-hover:to-amber-600 transition-all duration-300 shadow-md uppercase tracking-wider flex items-center justify-center gap-2">
+              GIOCA ORA <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+            </div>
+          </div>
+        </Link>
       </main>
     </div>
   );
