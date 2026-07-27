@@ -42,7 +42,32 @@ export default function DndPro() {
     const shuffledDuce = [...ducePhotos].sort(() => 0.5 - Math.random()).slice(0, duceCount);
     const shuffledNonDuce = [...nonDucePhotos].sort(() => 0.5 - Math.random()).slice(0, nonDuceCount);
     
-    const combined = [...shuffledDuce, ...shuffledNonDuce].sort(() => 0.5 - Math.random());
+    const combined: typeof databaseImmagini = [];
+    let duceLeft = [...shuffledDuce];
+    let nonDuceLeft = [...shuffledNonDuce];
+    let consecutiveDuce = 0;
+
+    while (duceLeft.length > 0 || nonDuceLeft.length > 0) {
+      if (duceLeft.length === 0) {
+        combined.push(nonDuceLeft.pop()!);
+        consecutiveDuce = 0;
+      } else if (nonDuceLeft.length === 0) {
+        combined.push(duceLeft.pop()!);
+        consecutiveDuce++;
+      } else if (consecutiveDuce >= 2) {
+        combined.push(nonDuceLeft.pop()!);
+        consecutiveDuce = 0;
+      } else {
+        const pickDuce = Math.random() < (duceLeft.length / (duceLeft.length + nonDuceLeft.length));
+        if (pickDuce) {
+          combined.push(duceLeft.pop()!);
+          consecutiveDuce++;
+        } else {
+          combined.push(nonDuceLeft.pop()!);
+          consecutiveDuce = 0;
+        }
+      }
+    }
 
     setQuestions(combined);
     setTotalQuestions(combined.length);
