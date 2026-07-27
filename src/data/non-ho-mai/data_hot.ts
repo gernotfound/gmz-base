@@ -148,5 +148,13 @@ export const dataHot = [
     "Non ho mai lasciato che il desiderio fisico mi facesse prendere decisioni altamente discutibili.",
     "Non ho mai sentito che il mio corpo reagiva da solo prima ancora che il mio cervello approvasse.",
     "Non ho mai imparato qualcosa di nuovo su me stesso dopo un incontro particolarmente intenso.",
-    "Non ho mai trovato incredibilmente eccitante la fase in cui ci si sveste con calma guardandosi negli occhi."
+    "Non ho mai trovato incredibilmente eccitante la fase in cui ci si sveste con calma guardandosi negli occhi.",
+    "Non ho mai baciato qualcuno senza sapere il suo nome.",
+    "Non ho mai avuto un avventura di una notte.",
+    "Non ho mai fatto sesso in un luogo pubblico affollato.",
+    "Non ho mai inviato una foto osé alla persona sbagliata.",
+    "Non ho mai avuto un sogno erotico su un amico/a presente in questa stanza.",
+    "Non ho mai finto un orgasmo.",
+    "Non ho mai fantasticato su qualcun altro mentre ero a letto con il mio partner.",
+    "Non ho mai rubato la biancheria intima di qualcuno."
 ];

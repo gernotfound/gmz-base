@@ -31,9 +31,6 @@ body {
 .flipped-u {
   display: inline-block;
   transform: scaleY(-1);
-  vertical-align: bottom;
-  position: relative;
-  top: -0.11em;
 }
 
 /* Forza 4 Board overrides */

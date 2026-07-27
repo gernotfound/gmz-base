@@ -58,5 +58,9 @@ export const dataImbarazzo = [
     "Non ho mai provato la carta di credito alla cassa, pregando divinità sconosciute che il PIN fosse giusto e la transazione passasse.",
     "Non ho mai sorriso a un cassiere o a un cameriere con la faccia colpevole per aver rotto qualcosa.",
     "Non ho mai detto a gran voce 'a me non succede mai!' ed esser smentito dal karma tre secondi dopo.",
-    "Non ho mai fatto una figuraccia talmente grande da voler letteralmente sprofondare al centro della Terra."
+    "Non ho mai fatto una figuraccia talmente grande da voler letteralmente sprofondare al centro della Terra.",
+    "Non ho mai sbirciato il telefono altrui senza permesso.",
+    "Non ho mai fatto uno screenshot di una conversazione per condividerlo con terzi e mandato lo screen alla persona stessa.",
+    "Non ho mai detto una bugia evidente solo per avere ragione in una discussione.",
+    "Non sono mai entrato/a per sbaglio nel bagno del sesso opposto."
 ];

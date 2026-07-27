@@ -48,5 +48,8 @@ export const dataConfini = [
     "Non ho mai fatto una fatica immensa a dire 'smettila di toccare le mie cose', lasciando che gli altri rovistassero tra la mia roba.",
     "Non ho mai tollerato un amico che faceva costantemente battute sul mio peso, sul mio aspetto o sui miei difetti spacciandole per 'scherzi'.",
     "Non ho mai avuto la tentazione di fare le valigie e scappare lontano pur di non affrontare una conversazione scomoda sui miei limiti.",
-    "Non ho mai imparato l'importanza vitale dei confini solo dopo aver toccato il fondo ed essermi perso/a del tutto."
+    "Non ho mai imparato l'importanza vitale dei confini solo dopo aver toccato il fondo ed essermi perso/a del tutto.",
+    "Non ho mai flirtato con qualcuno solo per ottenere un favore materiale.",
+    "Non ho mai annullato i miei piani solo per adattarmi a quelli di qualcun altro.",
+    "Non ho mai avuto paura di dire la mia opinione per evitare una lite."
 ];

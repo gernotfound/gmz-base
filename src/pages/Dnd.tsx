@@ -67,8 +67,9 @@ export default function Dnd() {
               <span className="mx-4 text-base font-black tracking-widest text-amber-500 uppercase">o</span>
               <div className="h-px bg-slate-700/50 w-20"></div>
             </div>
-            <h1 className="text-4xl font-black tracking-widest text-white drop-shadow-[0_4px_12px_rgba(255,255,255,0.15)] uppercase">
-              <span className="flipped-n">N</span>O<span className="flipped-n">N</span> D<span className="flipped-u">U</span>CE
+            <h1 className="flex items-center justify-center gap-3 text-4xl font-black tracking-widest text-white drop-shadow-[0_4px_12px_rgba(255,255,255,0.15)] uppercase">
+              <span className="flex items-center"><span className="flipped-n">N</span>O<span className="flipped-n">N</span></span>
+              <span className="flex items-center">D<span className="flipped-u">U</span>CE</span>
             </h1>
           </header>
 

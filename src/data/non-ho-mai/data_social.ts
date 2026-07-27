@@ -56,5 +56,9 @@ export const dataSocial = [
     "Non ho mai attivato e disattivato il WiFi o i Dati Mobili per far finta che un messaggio non partisse a causa della 'connessione'.",
     "Non ho mai creato un gruppo WhatsApp da solo (o con qualcuno che poi ho cacciato) solo per usarlo come blocco note personale.",
     "Non ho mai messo il telefono in modalità silenziosa per poi scordarmelo lì, perdendo chiamate importantissime.",
-    "Non ho mai finto che un messaggio o un commento imbarazzante fosse stato scritto da un 'amico che mi aveva rubato il telefono'."
+    "Non ho mai finto che un messaggio o un commento imbarazzante fosse stato scritto da un 'amico che mi aveva rubato il telefono'.",
+    "Non ho mai cercato il mio nome su Google per vedere cosa usciva.",
+    "Non ho mai creato un profilo falso per spiare un/una ex senza lasciare traccia.",
+    "Non ho mai spiato il profilo del nuovo partner del mio ex.",
+    "Non ho mai commentato una mia stessa foto dal mio account finto dimenticandomi di cambiare utente."
 ];
