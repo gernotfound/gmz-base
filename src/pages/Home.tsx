@@ -87,11 +87,11 @@ export default function Home() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-500/20 to-orange-600/20 rounded-bl-[100px] -z-10"></div>
             <div className="flex items-center gap-5 mb-6">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-3xl shadow-lg border border-white/10 shrink-0 relative">
-                📸
+                😒
                 <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded rotate-12 shadow-sm">PRO</span>
               </div>
               <div>
-                <h2 className="text-2xl font-black text-white group-hover:text-orange-400 transition-colors">Duce o Non Duce Pro</h2>
+                <h2 className="text-2xl font-black text-white group-hover:text-orange-400 transition-colors">Duce o Non Duce - Pro</h2>
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-400 bg-orange-900/30 px-3 py-1 rounded-full mt-1 inline-block">Quiz Fotografico</span>
               </div>
             </div>
