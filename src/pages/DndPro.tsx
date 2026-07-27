@@ -8,8 +8,10 @@ const imageFiles = import.meta.glob('/public/img_dndpro/*.{jpg,jpeg,png,webp,gif
 const databaseImmagini = Object.keys(imageFiles).map(key => {
   const filename = key.split('/').pop() || '';
   const isDuce = !filename.toLowerCase().startsWith('nd') && filename.toLowerCase().startsWith('d');
+  const module = imageFiles[key] as any;
+  const resolvedPath = module.default || module;
   return {
-    path: key.replace('/public', ''),
+    path: typeof resolvedPath === 'string' ? resolvedPath : key.replace('/public', ''),
     filename,
     isDuce
   };
@@ -29,10 +31,21 @@ export default function DndPro() {
 
   const startGame = () => {
     if (databaseImmagini.length === 0) return;
-    const shuffled = [...databaseImmagini].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 20); // max 20 per game
-    setQuestions(selected);
-    setTotalQuestions(selected.length);
+    
+    const ducePhotos = databaseImmagini.filter(img => img.isDuce);
+    const nonDucePhotos = databaseImmagini.filter(img => !img.isDuce);
+    
+    // Get up to 7 Duce and up to 13 Non-Duce
+    const duceCount = Math.min(7, ducePhotos.length);
+    const nonDuceCount = Math.min(13, nonDucePhotos.length);
+    
+    const shuffledDuce = [...ducePhotos].sort(() => 0.5 - Math.random()).slice(0, duceCount);
+    const shuffledNonDuce = [...nonDucePhotos].sort(() => 0.5 - Math.random()).slice(0, nonDuceCount);
+    
+    const combined = [...shuffledDuce, ...shuffledNonDuce].sort(() => 0.5 - Math.random());
+
+    setQuestions(combined);
+    setTotalQuestions(combined.length);
     setCurrentQuestionIndex(0);
     setScore(0);
     setGameState('playing');
