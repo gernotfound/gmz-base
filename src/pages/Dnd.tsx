@@ -1,26 +1,35 @@
 import { useMemo, useState } from 'react';
-import { ChevronRight, ExternalLink, Flag, Play, RotateCcw, ShieldCheck, Trophy } from 'lucide-react';
+import { ChevronRight, ExternalLink, Flag, Infinity as InfinityIcon, Play, RotateCcw, ShieldCheck, Trophy, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import GameHomeButton from '../components/GameHomeButton';
-import { databaseFrasi, type DndDifficulty } from '../data/dnd/questions';
+import { databaseFrasi, type DndDifficulty, type DndQuestion } from '../data/dnd/questions';
+import { additionalDndQuestions } from '../data/dnd/additionalQuestions';
 import { buildBalancedQuiz } from '../lib/quiz';
 
 type GameState = 'setup' | 'playing' | 'end';
 type DifficultyFilter = 'misto' | DndDifficulty;
+type QuizMode = 'rapida' | 'standard' | 'infinita';
 
-function createQuestionSet(total: 10 | 20, difficulty: DifficultyFilter) {
-  const filtered = difficulty === 'misto' ? databaseFrasi : databaseFrasi.filter(question => question.difficulty === difficulty);
-  const pool = filtered.filter(question => question.isDuce).length >= total / 2 && filtered.filter(question => !question.isDuce).length >= total / 2
-    ? filtered
-    : databaseFrasi;
-  return buildBalancedQuiz(pool, question => question.isDuce, total / 2);
+const allQuestions: readonly DndQuestion[] = [...databaseFrasi, ...additionalDndQuestions];
+
+function getPool(difficulty: DifficultyFilter) {
+  return difficulty === 'misto' ? allQuestions : allQuestions.filter(question => question.difficulty === difficulty);
+}
+
+function createQuestionSet(mode: QuizMode, difficulty: DifficultyFilter) {
+  const pool = getPool(difficulty);
+  const positives = pool.filter(question => question.isDuce).length;
+  const negatives = pool.length - positives;
+  const balancedAvailable = Math.min(positives, negatives);
+  const desiredPerSide = mode === 'rapida' ? 5 : mode === 'standard' ? 10 : balancedAvailable;
+  return buildBalancedQuiz(pool, question => question.isDuce, Math.max(1, Math.min(desiredPerSide, balancedAvailable)));
 }
 
 export default function Dnd() {
   const [gameState, setGameState] = useState<GameState>('setup');
-  const [roundLength, setRoundLength] = useState<10 | 20>(10);
+  const [mode, setMode] = useState<QuizMode>('rapida');
   const [difficulty, setDifficulty] = useState<DifficultyFilter>('misto');
-  const [questions, setQuestions] = useState(() => createQuestionSet(10, 'misto'));
+  const [questions, setQuestions] = useState(() => createQuestionSet('rapida', 'misto'));
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(false);
@@ -33,17 +42,22 @@ export default function Dnd() {
   const currentQuestion = questions[currentQuestionIndex];
   const progress = totalQuestions > 0 ? ((currentQuestionIndex + (answered ? 1 : 0)) / totalQuestions) * 100 : 0;
   const accuracy = answeredCount > 0 ? Math.round((score / answeredCount) * 100) : 0;
-  const sourceCount = useMemo(() => new Set(databaseFrasi.map(question => question.sourceUrl)).size, []);
+  const sourceCount = useMemo(() => new Set(allQuestions.map(question => question.sourceUrl)).size, []);
+  const filteredCount = getPool(difficulty).length;
 
-  const startGame = () => {
-    setQuestions(createQuestionSet(roundLength, difficulty));
-    setCurrentQuestionIndex(0);
+  const resetStats = () => {
     setScore(0);
     setAnsweredCount(0);
-    setAnswered(false);
-    setLastAnswerCorrect(null);
     setStreak(0);
     setBestStreak(0);
+  };
+
+  const startGame = () => {
+    setQuestions(createQuestionSet(mode, difficulty));
+    setCurrentQuestionIndex(0);
+    setAnswered(false);
+    setLastAnswerCorrect(null);
+    resetStats();
     setGameState('playing');
   };
 
@@ -62,13 +76,22 @@ export default function Dnd() {
   };
 
   const nextQuestion = () => {
-    if (currentQuestionIndex + 1 >= totalQuestions) {
-      setGameState('end');
+    if (currentQuestionIndex + 1 < totalQuestions) {
+      setCurrentQuestionIndex(index => index + 1);
+      setAnswered(false);
+      setLastAnswerCorrect(null);
       return;
     }
-    setCurrentQuestionIndex(index => index + 1);
-    setAnswered(false);
-    setLastAnswerCorrect(null);
+
+    if (mode === 'infinita') {
+      setQuestions(createQuestionSet('infinita', difficulty));
+      setCurrentQuestionIndex(0);
+      setAnswered(false);
+      setLastAnswerCorrect(null);
+      return;
+    }
+
+    setGameState('end');
   };
 
   if (!currentQuestion && gameState === 'playing') {
@@ -91,22 +114,30 @@ export default function Dnd() {
           <header className="mb-6 text-center">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">Quiz storico · fonti verificate</p>
             <h1 className="mt-2 text-3xl font-black tracking-[0.08em] text-white sm:text-4xl">DUCE <span className="text-amber-400">O</span> NON DUCE</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-400">Citazioni e fatti ripuliti dalle attribuzioni dubbie. Dopo ogni risposta puoi aprire la fonte.</p>
+            <p className="mt-3 text-sm leading-6 text-slate-400">Citazioni e fatti con fonte consultabile. Le attribuzioni dubbie vengono escluse dal database.</p>
           </header>
 
           <div className="mb-5 flex w-full items-center gap-3 rounded-2xl border border-emerald-400/15 bg-emerald-500/[0.07] p-4 text-left">
             <ShieldCheck className="h-6 w-6 shrink-0 text-emerald-300" aria-hidden="true" />
             <div>
               <p className="text-xs font-black text-emerald-100">Database editoriale tracciato</p>
-              <p className="mt-1 text-[11px] leading-5 text-emerald-200/60">{databaseFrasi.length} voci · {sourceCount} fonti istituzionali o enciclopediche</p>
+              <p className="mt-1 text-[11px] leading-5 text-emerald-200/60">{allQuestions.length} voci · {sourceCount} fonti · {filteredCount} disponibili con il filtro attuale</p>
             </div>
           </div>
 
           <section className="w-full rounded-[2rem] border border-white/[0.08] bg-slate-900/70 p-5 shadow-2xl">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Lunghezza</p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {([10, 20] as const).map(value => (
-                <button key={value} type="button" onClick={() => setRoundLength(value)} className={`rounded-xl border py-3 text-sm font-black ${roundLength === value ? 'border-amber-400/35 bg-amber-500/10 text-white' : 'border-white/[0.07] bg-white/[0.03] text-slate-500'}`}>{value} domande</button>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Modalità</p>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {([
+                ['rapida', 'Rapida', '10', Zap],
+                ['standard', 'Standard', '20', Play],
+                ['infinita', 'Infinita', '∞', InfinityIcon],
+              ] as const).map(([value, label, sublabel, Icon]) => (
+                <button key={value} type="button" onClick={() => setMode(value)} className={`rounded-xl border px-2 py-3 text-center ${mode === value ? 'border-amber-400/35 bg-amber-500/10 text-white' : 'border-white/[0.07] bg-white/[0.03] text-slate-500'}`}>
+                  <Icon className="mx-auto h-4 w-4" aria-hidden="true" />
+                  <span className="mt-1 block text-xs font-black">{label}</span>
+                  <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-wide opacity-60">{sublabel}</span>
+                </button>
               ))}
             </div>
 
@@ -116,6 +147,7 @@ export default function Dnd() {
                 <button key={value} type="button" onClick={() => setDifficulty(value)} className={`rounded-xl border px-2 py-3 text-xs font-black capitalize ${difficulty === value ? 'border-amber-400/35 bg-amber-500/10 text-white' : 'border-white/[0.07] bg-white/[0.03] text-slate-500'}`}>{value}</button>
               ))}
             </div>
+            <p className="mt-2 text-[10px] leading-4 text-slate-600">Il round resta 50/50; se un filtro contiene poche voci, la lunghezza si adatta automaticamente.</p>
 
             <button type="button" onClick={startGame} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-base font-black uppercase tracking-wide text-white shadow-lg shadow-orange-500/15">
               <Play className="h-5 w-5 fill-current" aria-hidden="true" /> Inizia
@@ -127,12 +159,12 @@ export default function Dnd() {
       {gameState === 'playing' && currentQuestion && (
         <main className="game-compact-header mt-12 flex w-full max-w-md flex-col items-center sm:mt-10">
           <header className="mb-5 w-full text-center">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">Quiz storico · 50/50</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">Quiz storico · 50/50 · {mode}</p>
             <h1 className="mt-2 text-3xl font-black tracking-[0.08em] text-white sm:text-4xl">DUCE <span className="text-amber-400">O</span> NON DUCE</h1>
           </header>
 
           <div className="mb-2.5 flex w-full items-center justify-between px-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-            <span>{currentQuestion.kind === 'citazione' ? 'Citazione' : 'Fatto'} <strong className="text-sky-400">{currentQuestionIndex + 1}</strong>/{totalQuestions}</span>
+            <span>{currentQuestion.kind === 'citazione' ? 'Citazione' : 'Fatto'} <strong className="text-sky-400">{mode === 'infinita' ? (answered ? answeredCount : answeredCount + 1) : currentQuestionIndex + 1}</strong>{mode === 'infinita' ? '' : `/${totalQuestions}`}</span>
             <span className="flex items-center gap-3"><span>Serie <strong className="text-amber-300">{streak}</strong></span><span>Punti <strong className="text-emerald-400">{score}</strong></span></span>
           </div>
           <div className="quiz-progress mb-3 w-full" aria-hidden="true"><span className="bg-gradient-to-r from-amber-400 to-orange-500" style={{ width: `${progress}%` }} /></div>
@@ -159,7 +191,7 @@ export default function Dnd() {
           <div className="mt-4 min-h-16 w-full">
             {answered ? (
               <button type="button" onClick={nextQuestion} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 py-4 text-base font-black uppercase tracking-wide text-white shadow-lg shadow-indigo-500/15">
-                {currentQuestionIndex + 1 >= totalQuestions ? 'Vedi risultato' : 'Prossima domanda'} <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                {mode !== 'infinita' && currentQuestionIndex + 1 >= totalQuestions ? 'Vedi risultato' : 'Prossima domanda'} <ChevronRight className="h-5 w-5" aria-hidden="true" />
               </button>
             ) : (
               <button type="button" onClick={() => setGameState('end')} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.035] py-3.5 text-xs font-black uppercase tracking-wider text-slate-500"><Flag className="h-3.5 w-3.5" aria-hidden="true" /> Termina partita</button>
@@ -173,7 +205,7 @@ export default function Dnd() {
           <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl border border-amber-400/15 bg-amber-500/10 shadow-lg"><Trophy className="h-8 w-8 text-amber-300" aria-hidden="true" /></div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">Risultato</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">Partita conclusa</h2>
-          <p className="mt-2 text-sm font-semibold text-slate-500">Hai risposto a {answeredCount} domande su {totalQuestions}.</p>
+          <p className="mt-2 text-sm font-semibold text-slate-500">Hai risposto a {answeredCount} {answeredCount === 1 ? 'domanda' : 'domande'}.</p>
           <div className="my-6 grid w-full grid-cols-2 gap-3">
             <div className="rounded-[1.5rem] border border-white/[0.08] bg-slate-900/70 p-5"><p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Precisione</p><p className="mt-2 text-4xl font-black text-emerald-400">{accuracy}%</p><p className="mt-1 text-xs font-bold text-slate-600">{score}/{answeredCount || 0}</p></div>
             <div className="rounded-[1.5rem] border border-white/[0.08] bg-slate-900/70 p-5"><p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Serie migliore</p><p className="mt-2 text-4xl font-black text-amber-300">{bestStreak}</p><p className="mt-1 text-xs font-bold text-slate-600">consecutive</p></div>

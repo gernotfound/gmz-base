@@ -44,21 +44,37 @@ Per verifiche manuali, prova almeno:
 - PWA standalone;
 - `prefers-reduced-motion` attivo.
 
+## Forza 4
+
+Forza 4 supporta due giocatori sia online P2P sia sullo stesso dispositivo. La sessione mantiene punteggio e pareggi, alterna il primo giocatore nelle rivincite e richiede l'accettazione dell'avversario prima di iniziare un nuovo round online.
+
+In caso di interruzione breve della connessione, la sessione viene mantenuta e il client prova a riconnettersi. L'host conserva lo stato autorevole e, al rientro dell'altro giocatore, sincronizza scacchiera, turno, risultato, round e punteggio prima di riabilitare le mosse.
+
+## Non Ho Mai · 18+
+
+`Non Ho Mai` è intenzionalmente un party game **18+**. Il corpus comprende categorie leggere e materiale esplicito per adulti; l'accesso mostra una conferma 18+ per sessione. I preset permettono di scegliere rapidamente un tono più leggero oppure un mazzo esplicito.
+
+Qualunque carta può essere scartata durante la partita senza penalità o spiegazioni. Quando si modifica il dataset, non trasformare automaticamente il gioco in una versione teen-safe: l'etichetta 18+ e la separazione delle categorie sono parte del design.
+
 ## Dinamiche dei quiz
 
 `src/lib/quiz.ts` costruisce set bilanciati tra le due risposte, mantenendo la casualità ma impedendo sequenze superiori a due risposte uguali. In questo modo non conviene indovinare seguendo soltanto la frequenza statistica.
 
+`Duce o Non Duce` usa un set editoriale con autore/contesto, difficoltà e fonte consultabile. Le nuove aggiunte vanno inserite solo se l'attribuzione è verificabile; le voci dubbie o apocrife non vanno usate come domande fattuali.
+
 ## Duce o Non Duce · Pro
 
-Le immagini ottimizzate vivono in `public/img_dndpro`. I file che iniziano con `d` sono classificati come Duce; quelli che iniziano con `nd` come Non Duce.
+Il gameplay Pro usa `src/data/dnd/photoQuestions.ts`: ogni domanda fotografica dichiara esplicitamente soggetto, periodo, provenienza, licenza e URL della scheda archivistica. La risposta non viene più dedotta dal prefisso del nome file.
 
-Per aggiungere immagini originali, mettile in `public/raw_img_dndpro` e avvia:
+Le vecchie immagini ottimizzate in `public/img_dndpro` restano nel repository come dataset legacy, ma non entrano nel quiz verificato finché non sono accompagnate da metadati attendibili. Le immagini verificate sono caricate dalle rispettive pagine Wikimedia Commons e richiedono rete se non sono già nella cache del browser.
+
+Per ottimizzare eventuali futuri asset locali puoi ancora usare:
 
 ```bash
 bun run process-images
 ```
 
-Lo script converte le immagini in WebP 800×800 e rigenera `src/data/dnd/images.ts`, evitando glob runtime sulla cartella `public`.
+Lo script resta un'utility tecnica di conversione WebP: la provenienza storica e la licenza devono essere documentate separatamente e non possono essere dedotte dal nome del file.
 
 ## Deploy
 

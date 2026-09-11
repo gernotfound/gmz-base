@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, Copy, DoorOpen, Globe2, Play, RotateCcw, Smartphone, Users } from 'lucide-react';
+import { Check, Copy, DoorOpen, Globe2, Play, RefreshCw, RotateCcw, Smartphone, Users, Wifi, WifiOff } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import Peer, { type DataConnection } from 'peerjs';
 import clsx from 'clsx';
@@ -9,18 +9,33 @@ import GameHomeButton from '../components/GameHomeButton';
 const ROWS = 6;
 const COLS = 7;
 const CONNECTION_TIMEOUT_MS = 8_000;
+const RECONNECT_GRACE_MS = 12_000;
+const RECONNECT_RETRY_MS = 1_400;
 
 type GameState = 'setup' | 'playing' | 'end';
 type GameMode = 'online' | 'local';
+type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'lost';
 type PlayerNumber = 0 | 1 | 2;
+type ActivePlayer = 1 | 2;
 type CellPosition = { row: number; col: number };
-type FallingToken = CellPosition & { player: 1 | 2; id: number };
+type FallingToken = CellPosition & { player: ActivePlayer; id: number };
 type SessionScore = { red: number; yellow: number; draws: number };
+type SyncPayload = {
+  board: number[][];
+  currentPlayer: ActivePlayer;
+  starter: ActivePlayer;
+  score: SessionScore;
+  roundNumber: number;
+  gameState: 'playing' | 'end';
+  winner: number | null;
+  winningCells: CellPosition[];
+};
 type PeerMessage =
-  | { type: 'move'; col: number; playerNum: 1 | 2 }
+  | { type: 'move'; col: number; playerNum: ActivePlayer }
   | { type: 'restart-request' }
   | { type: 'restart-accept' }
-  | { type: 'restart-decline' };
+  | { type: 'restart-decline' }
+  | { type: 'sync'; payload: SyncPayload };
 
 function createEmptyBoard() {
   return Array.from({ length: ROWS }, () => Array<number>(COLS).fill(0));
@@ -42,11 +57,42 @@ function getDropDuration(row: number) {
   return 300 + row * 48;
 }
 
+function isValidBoard(value: unknown): value is number[][] {
+  return Array.isArray(value) && value.length === ROWS && value.every(row =>
+    Array.isArray(row) && row.length === COLS && row.every(cell => cell === 0 || cell === 1 || cell === 2),
+  );
+}
+
+function isCellPosition(value: unknown): value is CellPosition {
+  if (!value || typeof value !== 'object') return false;
+  const cell = value as { row?: unknown; col?: unknown };
+  return Number.isInteger(cell.row) && Number.isInteger(cell.col) && Number(cell.row) >= 0 && Number(cell.row) < ROWS && Number(cell.col) >= 0 && Number(cell.col) < COLS;
+}
+
+function isSyncPayload(value: unknown): value is SyncPayload {
+  if (!value || typeof value !== 'object') return false;
+  const payload = value as Partial<SyncPayload>;
+  const score = payload.score as Partial<SessionScore> | undefined;
+  return (
+    isValidBoard(payload.board) &&
+    (payload.currentPlayer === 1 || payload.currentPlayer === 2) &&
+    (payload.starter === 1 || payload.starter === 2) &&
+    typeof score?.red === 'number' && score.red >= 0 &&
+    typeof score?.yellow === 'number' && score.yellow >= 0 &&
+    typeof score?.draws === 'number' && score.draws >= 0 &&
+    typeof payload.roundNumber === 'number' && Number.isInteger(payload.roundNumber) && payload.roundNumber >= 1 &&
+    (payload.gameState === 'playing' || payload.gameState === 'end') &&
+    (payload.winner === null || payload.winner === 0 || payload.winner === 1 || payload.winner === 2) &&
+    Array.isArray(payload.winningCells) && payload.winningCells.every(isCellPosition)
+  );
+}
+
 function isPeerMessage(data: unknown): data is PeerMessage {
   if (!data || typeof data !== 'object') return false;
-  const message = data as { type?: unknown; col?: unknown; playerNum?: unknown };
+  const message = data as { type?: unknown; col?: unknown; playerNum?: unknown; payload?: unknown };
   if (message.type === 'restart-request' || message.type === 'restart-accept' || message.type === 'restart-decline') return true;
-  return message.type === 'move' && typeof message.col === 'number' && Number.isInteger(message.col) && message.col >= 0 && message.col < COLS && (message.playerNum === 1 || message.playerNum === 2);
+  if (message.type === 'sync') return isSyncPayload(message.payload);
+  return message.type === 'move' && Number.isInteger(message.col) && Number(message.col) >= 0 && Number(message.col) < COLS && (message.playerNum === 1 || message.playerNum === 2);
 }
 
 function findWinningCells(board: number[][], row: number, col: number, player: number): CellPosition[] {
@@ -75,55 +121,63 @@ export default function Forza4() {
 
   const [mode, setMode] = useState<GameMode>('online');
   const [gameState, setGameState] = useState<GameState>('setup');
+  const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [statusText, setStatusText] = useState('Connessione ai server…');
   const [statusError, setStatusError] = useState(false);
   const [peerReady, setPeerReady] = useState(false);
-  const [connecting, setConnecting] = useState(false);
   const [myId, setMyId] = useState('');
   const [remoteId, setRemoteId] = useState(() => normalizeCode(initialJoinIdRef.current ?? ''));
   const [copied, setCopied] = useState(false);
   const [board, setBoard] = useState<number[][]>(createEmptyBoard);
   const [myPlayerNum, setMyPlayerNum] = useState<PlayerNumber>(0);
-  const [currentPlayer, setCurrentPlayerState] = useState<1 | 2>(1);
-  const [myTurn, setMyTurn] = useState(false);
+  const [currentPlayer, setCurrentPlayerState] = useState<ActivePlayer>(1);
   const [winner, setWinner] = useState<number | null>(null);
   const [winningCells, setWinningCells] = useState<CellPosition[]>([]);
   const [fallingToken, setFallingToken] = useState<FallingToken | null>(null);
   const [score, setScore] = useState<SessionScore>({ red: 0, yellow: 0, draws: 0 });
+  const [roundNumber, setRoundNumber] = useState(1);
   const [restartRequested, setRestartRequested] = useState(false);
   const [incomingRestart, setIncomingRestart] = useState(false);
 
   const peerRef = useRef<Peer | null>(null);
+  const peerReadyRef = useRef(false);
   const connRef = useRef<DataConnection | null>(null);
   const connectionTimeoutRef = useRef<number | null>(null);
+  const reconnectExpiryRef = useRef<number | null>(null);
+  const reconnectRetryRef = useRef<number | null>(null);
+  const reconnectDeadlineRef = useRef(0);
   const dropTimeoutRef = useRef<number | null>(null);
   const fallingTokenIdRef = useRef(0);
   const boardRef = useRef(board);
-  const currentPlayerRef = useRef<1 | 2>(1);
+  const currentPlayerRef = useRef<ActivePlayer>(1);
   const myPlayerNumRef = useRef<PlayerNumber>(0);
-  const myTurnRef = useRef(false);
   const gameOverRef = useRef(false);
-  const hasConnectedRef = useRef(false);
-  const roundStarterRef = useRef<1 | 2>(1);
+  const roundStarterRef = useRef<ActivePlayer>(1);
+  const scoreRef = useRef<SessionScore>({ red: 0, yellow: 0, draws: 0 });
+  const roundNumberRef = useRef(1);
+  const gameStateRef = useRef<GameState>('setup');
+  const winnerRef = useRef<number | null>(null);
+  const winningCellsRef = useRef<CellPosition[]>([]);
+  const modeRef = useRef<GameMode>('online');
+  const connectionStateRef = useRef<ConnectionState>('idle');
+  const remoteIdRef = useRef(remoteId);
+  const isHostRef = useRef(false);
+  const sessionStartedRef = useRef(false);
+  const intentionalDisconnectRef = useRef(false);
 
-  const clearConnectionTimeout = () => {
-    if (connectionTimeoutRef.current !== null) {
-      window.clearTimeout(connectionTimeoutRef.current);
-      connectionTimeoutRef.current = null;
-    }
+  const updateMode = (value: GameMode) => {
+    modeRef.current = value;
+    setMode(value);
   };
 
-  const clearDropAnimation = () => {
-    if (dropTimeoutRef.current !== null) {
-      window.clearTimeout(dropTimeoutRef.current);
-      dropTimeoutRef.current = null;
-    }
-    setFallingToken(null);
+  const updateGameState = (value: GameState) => {
+    gameStateRef.current = value;
+    setGameState(value);
   };
 
-  const setTurn = (value: boolean) => {
-    myTurnRef.current = value;
-    setMyTurn(value);
+  const updateConnectionState = (value: ConnectionState) => {
+    connectionStateRef.current = value;
+    setConnectionState(value);
   };
 
   const setPlayer = (value: PlayerNumber) => {
@@ -131,15 +185,38 @@ export default function Forza4() {
     setMyPlayerNum(value);
   };
 
-  const setCurrentPlayer = (value: 1 | 2) => {
+  const setCurrentPlayer = (value: ActivePlayer) => {
     currentPlayerRef.current = value;
     setCurrentPlayerState(value);
-    if (mode === 'online') setTurn(myPlayerNumRef.current === value);
+  };
+
+  const updateScore = (value: SessionScore) => {
+    scoreRef.current = value;
+    setScore(value);
+  };
+
+  const clearConnectionTimeout = () => {
+    if (connectionTimeoutRef.current !== null) window.clearTimeout(connectionTimeoutRef.current);
+    connectionTimeoutRef.current = null;
+  };
+
+  const clearReconnectTimers = () => {
+    if (reconnectExpiryRef.current !== null) window.clearTimeout(reconnectExpiryRef.current);
+    if (reconnectRetryRef.current !== null) window.clearTimeout(reconnectRetryRef.current);
+    reconnectExpiryRef.current = null;
+    reconnectRetryRef.current = null;
+    reconnectDeadlineRef.current = 0;
+  };
+
+  const clearDropAnimation = () => {
+    if (dropTimeoutRef.current !== null) window.clearTimeout(dropTimeoutRef.current);
+    dropTimeoutRef.current = null;
+    setFallingToken(null);
   };
 
   const evaluateDrawCondition = (currentBoard: number[][]) => currentBoard[0].every(cell => cell !== 0);
 
-  const animateDrop = (row: number, col: number, player: 1 | 2) => {
+  const animateDrop = (row: number, col: number, player: ActivePlayer) => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       clearDropAnimation();
       return;
@@ -154,14 +231,16 @@ export default function Forza4() {
   };
 
   const registerResult = (result: number) => {
-    setScore(current => ({
+    const current = scoreRef.current;
+    const next = {
       red: current.red + (result === 1 ? 1 : 0),
       yellow: current.yellow + (result === 2 ? 1 : 0),
       draws: current.draws + (result === 0 ? 1 : 0),
-    }));
+    };
+    updateScore(next);
   };
 
-  const processMove = (col: number, playerNum: 1 | 2) => {
+  const processMove = (col: number, playerNum: ActivePlayer) => {
     if (gameOverRef.current || playerNum !== currentPlayerRef.current || col < 0 || col >= COLS || boardRef.current[0][col] !== 0) return false;
 
     const nextBoard = boardRef.current.map(row => [...row]);
@@ -182,86 +261,181 @@ export default function Forza4() {
     const winCells = findWinningCells(nextBoard, placedRow, col, playerNum);
     if (winCells.length >= 4) {
       gameOverRef.current = true;
-      setWinningCells(winCells);
+      winnerRef.current = playerNum;
+      winningCellsRef.current = winCells;
       setWinner(playerNum);
+      setWinningCells(winCells);
       registerResult(playerNum);
-      setGameState('end');
-      setTurn(false);
+      updateGameState('end');
     } else if (evaluateDrawCondition(nextBoard)) {
       gameOverRef.current = true;
-      setWinningCells([]);
+      winnerRef.current = 0;
+      winningCellsRef.current = [];
       setWinner(0);
+      setWinningCells([]);
       registerResult(0);
-      setGameState('end');
-      setTurn(false);
+      updateGameState('end');
     } else {
       setCurrentPlayer(playerNum === 1 ? 2 : 1);
     }
     return true;
   };
 
-  const startRound = (starter: 1 | 2) => {
+  const startRound = (starter: ActivePlayer, nextRoundNumber: number) => {
     clearDropAnimation();
     const emptyBoard = createEmptyBoard();
     roundStarterRef.current = starter;
     boardRef.current = emptyBoard;
     setBoard(emptyBoard);
-    setWinningCells([]);
+    winnerRef.current = null;
+    winningCellsRef.current = [];
     setWinner(null);
+    setWinningCells([]);
     setRestartRequested(false);
     setIncomingRestart(false);
     gameOverRef.current = false;
-    setGameState('playing');
-    setStatusError(false);
+    roundNumberRef.current = nextRoundNumber;
+    setRoundNumber(nextRoundNumber);
     setCurrentPlayer(starter);
-    setStatusText(mode === 'local' ? `Partita locale · parte ${starter === 1 ? 'Rosso' : 'Giallo'}` : `Nuovo round · parte ${starter === 1 ? 'Rosso' : 'Giallo'}`);
+    updateGameState('playing');
+    setStatusError(false);
+    setStatusText(`${modeRef.current === 'local' ? 'Partita locale' : 'Nuovo round'} · parte ${starter === 1 ? 'Rosso' : 'Giallo'}`);
   };
 
-  const startNextRound = () => startRound(roundStarterRef.current === 1 ? 2 : 1);
+  const startNextRound = () => startRound(roundStarterRef.current === 1 ? 2 : 1, roundNumberRef.current + 1);
 
-  const startLocalGame = () => {
-    const connection = connRef.current;
-    connRef.current = null;
-    connection?.close();
-    hasConnectedRef.current = false;
-    setMode('local');
-    setPlayer(0);
-    setScore({ red: 0, yellow: 0, draws: 0 });
+  const resetSession = (nextMode: GameMode) => {
+    updateMode(nextMode);
+    updateScore({ red: 0, yellow: 0, draws: 0 });
     roundStarterRef.current = 1;
-    startRound(1);
+    roundNumberRef.current = 1;
+    setRoundNumber(1);
+    const emptyBoard = createEmptyBoard();
+    boardRef.current = emptyBoard;
+    setBoard(emptyBoard);
+    winnerRef.current = null;
+    winningCellsRef.current = [];
+    setWinner(null);
+    setWinningCells([]);
+    setRestartRequested(false);
+    setIncomingRestart(false);
+    gameOverRef.current = false;
+    setCurrentPlayer(1);
   };
 
-  const handleDisconnect = () => {
-    clearConnectionTimeout();
+  const buildSyncPayload = (): SyncPayload => ({
+    board: boardRef.current.map(row => [...row]),
+    currentPlayer: currentPlayerRef.current,
+    starter: roundStarterRef.current,
+    score: { ...scoreRef.current },
+    roundNumber: roundNumberRef.current,
+    gameState: gameStateRef.current === 'end' ? 'end' : 'playing',
+    winner: winnerRef.current,
+    winningCells: [...winningCellsRef.current],
+  });
+
+  const applySync = (payload: SyncPayload) => {
     clearDropAnimation();
-    setConnecting(false);
-    if (!hasConnectedRef.current) return;
-    hasConnectedRef.current = false;
-    gameOverRef.current = true;
-    setGameState('end');
-    setStatusText('Connessione persa');
-    setStatusError(true);
-    setWinner(-1);
-    setTurn(false);
+    boardRef.current = payload.board.map(row => [...row]);
+    setBoard(boardRef.current);
+    roundStarterRef.current = payload.starter;
+    setCurrentPlayer(payload.currentPlayer);
+    updateScore({ ...payload.score });
+    roundNumberRef.current = payload.roundNumber;
+    setRoundNumber(payload.roundNumber);
+    winnerRef.current = payload.winner;
+    winningCellsRef.current = [...payload.winningCells];
+    setWinner(payload.winner);
+    setWinningCells([...payload.winningCells]);
+    gameOverRef.current = payload.gameState === 'end';
+    setRestartRequested(false);
+    setIncomingRestart(false);
+    updateGameState(payload.gameState);
   };
 
-  const bindConnectionEvents = (connection: DataConnection) => {
+  const sendSync = () => {
+    if (isHostRef.current && connRef.current?.open) {
+      connRef.current.send({ type: 'sync', payload: buildSyncPayload() } satisfies PeerMessage);
+    }
+  };
+
+  const expireReconnect = () => {
+    clearReconnectTimers();
+    connRef.current = null;
+    updateConnectionState('lost');
+    setStatusError(true);
+    setStatusText('Connessione non ripristinata. La partita resta salvata su questo dispositivo.');
+  };
+
+  const scheduleGuestReconnect = (delay = RECONNECT_RETRY_MS) => {
+    if (isHostRef.current || modeRef.current !== 'online' || connectionStateRef.current !== 'reconnecting') return;
+    if (Date.now() >= reconnectDeadlineRef.current) {
+      expireReconnect();
+      return;
+    }
+    if (reconnectRetryRef.current !== null) window.clearTimeout(reconnectRetryRef.current);
+    reconnectRetryRef.current = window.setTimeout(() => {
+      reconnectRetryRef.current = null;
+      const peer = peerRef.current;
+      const code = remoteIdRef.current;
+      if (!peer || !peerReadyRef.current || !isValidCode(code) || connectionStateRef.current !== 'reconnecting') return;
+      const connection = peer.connect(`F4-${code}`, { reliable: true });
+      bindConnectionEvents(connection, true);
+    }, delay);
+  };
+
+  const beginReconnect = () => {
+    if (intentionalDisconnectRef.current || modeRef.current !== 'online' || !sessionStartedRef.current) return;
+    if (connectionStateRef.current !== 'reconnecting') {
+      reconnectDeadlineRef.current = Date.now() + RECONNECT_GRACE_MS;
+      updateConnectionState('reconnecting');
+      setStatusError(false);
+      setStatusText(isHostRef.current ? 'Connessione interrotta · attendo il rientro dell’avversario…' : 'Connessione interrotta · provo a rientrare…');
+      reconnectExpiryRef.current = window.setTimeout(expireReconnect, RECONNECT_GRACE_MS);
+    }
+    if (!isHostRef.current) scheduleGuestReconnect(200);
+  };
+
+  const handleConnectionFailure = (connection: DataConnection, reconnectAttempt: boolean) => {
+    if (connRef.current !== connection) return;
+    connRef.current = null;
+    if (intentionalDisconnectRef.current) return;
+    if (sessionStartedRef.current) {
+      beginReconnect();
+      if (reconnectAttempt && !isHostRef.current) scheduleGuestReconnect();
+      return;
+    }
+    clearConnectionTimeout();
+    updateConnectionState('idle');
+    setStatusText('Impossibile aprire la connessione');
+    setStatusError(true);
+  };
+
+  function bindConnectionEvents(connection: DataConnection, reconnectAttempt = false) {
     connRef.current = connection;
+
     connection.on('open', () => {
       if (connRef.current !== connection) return;
       clearConnectionTimeout();
-      hasConnectedRef.current = true;
-      setConnecting(false);
-      setMode('online');
-      setGameState('playing');
-      setStatusText('Partita online · parte Rosso');
+      const wasExistingSession = reconnectAttempt || sessionStartedRef.current || connectionStateRef.current === 'reconnecting';
+      clearReconnectTimers();
+      sessionStartedRef.current = true;
+      updateMode('online');
+      updateConnectionState('connected');
       setStatusError(false);
+      setStatusText(wasExistingSession ? 'Riconnesso · partita sincronizzata' : 'Partita online · parte Rosso');
       setSearchParams({});
-      setCurrentPlayer(1);
+      if (!wasExistingSession) updateGameState('playing');
+      if (isHostRef.current) window.setTimeout(sendSync, 80);
     });
 
     connection.on('data', data => {
       if (connRef.current !== connection || !isPeerMessage(data)) return;
+
+      if (data.type === 'sync') {
+        if (!isHostRef.current) applySync(data.payload);
+        return;
+      }
       if (data.type === 'restart-request') {
         if (gameOverRef.current) setIncomingRestart(true);
         return;
@@ -277,32 +451,18 @@ export default function Forza4() {
       }
 
       const expectedRemotePlayer = myPlayerNumRef.current === 1 ? 2 : 1;
-      if (data.playerNum !== expectedRemotePlayer || data.playerNum !== currentPlayerRef.current || myTurnRef.current || gameOverRef.current) return;
+      if (data.playerNum !== expectedRemotePlayer || data.playerNum !== currentPlayerRef.current || gameOverRef.current) return;
       processMove(data.col, data.playerNum);
     });
 
-    connection.on('close', () => {
-      if (connRef.current !== connection) return;
-      connRef.current = null;
-      handleDisconnect();
-    });
+    connection.on('close', () => handleConnectionFailure(connection, reconnectAttempt));
+    connection.on('error', () => handleConnectionFailure(connection, reconnectAttempt));
+  }
 
-    connection.on('error', () => {
-      if (connRef.current !== connection) return;
-      connRef.current = null;
-      if (hasConnectedRef.current) handleDisconnect();
-      else {
-        clearConnectionTimeout();
-        setConnecting(false);
-        setStatusText('Impossibile aprire la connessione');
-        setStatusError(true);
-      }
-    });
-  };
-
-  const startOutgoingConnection = (peer: Peer, rawCode: string) => {
+  const startOutgoingConnection = (peer: Peer, rawCode: string, reconnectAttempt = false) => {
     const code = normalizeCode(rawCode);
     setRemoteId(code);
+    remoteIdRef.current = code;
     if (!isValidCode(code)) {
       setStatusText('Inserisci un codice valido di 4–6 caratteri');
       setStatusError(true);
@@ -310,32 +470,36 @@ export default function Forza4() {
     }
 
     clearConnectionTimeout();
-    clearDropAnimation();
+    intentionalDisconnectRef.current = false;
+    isHostRef.current = false;
+
+    if (!reconnectAttempt) {
+      clearReconnectTimers();
+      resetSession('online');
+      sessionStartedRef.current = false;
+      setPlayer(2);
+      updateConnectionState('connecting');
+      setStatusText('Connessione in corso…');
+      setStatusError(false);
+    }
+
     const previousConnection = connRef.current;
     connRef.current = null;
     previousConnection?.close();
-    hasConnectedRef.current = false;
-    roundStarterRef.current = 1;
-    setScore({ red: 0, yellow: 0, draws: 0 });
-    setMode('online');
-    setPlayer(2);
-    setTurn(false);
-    setCurrentPlayer(1);
-    setConnecting(true);
-    setStatusText('Connessione in corso…');
-    setStatusError(false);
-
     const connection = peer.connect(`F4-${code}`, { reliable: true });
-    bindConnectionEvents(connection);
-    connectionTimeoutRef.current = window.setTimeout(() => {
-      if (!hasConnectedRef.current && connRef.current === connection) {
-        connRef.current = null;
-        connection.close();
-        setConnecting(false);
-        setStatusText('Host non trovato. Controlla il codice e riprova.');
-        setStatusError(true);
-      }
-    }, CONNECTION_TIMEOUT_MS);
+    bindConnectionEvents(connection, reconnectAttempt);
+
+    if (!reconnectAttempt) {
+      connectionTimeoutRef.current = window.setTimeout(() => {
+        if (!sessionStartedRef.current && connRef.current === connection) {
+          connRef.current = null;
+          connection.close();
+          updateConnectionState('idle');
+          setStatusText('Host non trovato. Controlla il codice e riprova.');
+          setStatusError(true);
+        }
+      }, CONNECTION_TIMEOUT_MS);
+    }
   };
 
   useEffect(() => {
@@ -344,38 +508,56 @@ export default function Forza4() {
     peerRef.current = peer;
 
     peer.on('open', () => {
+      peerReadyRef.current = true;
       setPeerReady(true);
       setMyId(displayId);
       const initialJoinId = initialJoinIdRef.current;
       if (initialJoinId) startOutgoingConnection(peer, initialJoinId);
       else {
+        updateConnectionState('idle');
         setStatusText('Scegli online o partita locale');
         setStatusError(false);
       }
     });
 
     peer.on('connection', connection => {
-      if (connRef.current?.open) {
+      if (modeRef.current === 'local' || (connRef.current?.open && connectionStateRef.current !== 'reconnecting')) {
         connection.close();
         return;
       }
+
       clearConnectionTimeout();
-      clearDropAnimation();
+      const reconnecting = sessionStartedRef.current && (connectionStateRef.current === 'reconnecting' || connectionStateRef.current === 'lost');
       const previousConnection = connRef.current;
       connRef.current = null;
       previousConnection?.close();
-      setConnecting(false);
-      setMode('online');
-      setScore({ red: 0, yellow: 0, draws: 0 });
-      roundStarterRef.current = 1;
-      setPlayer(1);
-      setCurrentPlayer(1);
-      bindConnectionEvents(connection);
+      intentionalDisconnectRef.current = false;
+      isHostRef.current = true;
+
+      if (!reconnecting) {
+        resetSession('online');
+        sessionStartedRef.current = false;
+        setPlayer(1);
+        updateConnectionState('connecting');
+        setStatusText('Giocatore trovato · connessione…');
+      } else {
+        updateConnectionState('reconnecting');
+      }
+
+      bindConnectionEvents(connection, reconnecting);
     });
 
     peer.on('error', error => {
+      if (connectionStateRef.current === 'reconnecting' && error.type === 'peer-unavailable') {
+        scheduleGuestReconnect();
+        return;
+      }
+      if (sessionStartedRef.current && !intentionalDisconnectRef.current) {
+        beginReconnect();
+        return;
+      }
       clearConnectionTimeout();
-      setConnecting(false);
+      updateConnectionState('idle');
       setStatusError(true);
       if (error.type === 'unavailable-id') setStatusText('Codice host già in uso. Ricarica la pagina per generarne uno nuovo.');
       else if (error.type === 'peer-unavailable') setStatusText('Host non trovato. Controlla il codice e riprova.');
@@ -383,8 +565,11 @@ export default function Forza4() {
     });
 
     return () => {
-      hasConnectedRef.current = false;
+      peerReadyRef.current = false;
+      intentionalDisconnectRef.current = true;
+      sessionStartedRef.current = false;
       clearConnectionTimeout();
+      clearReconnectTimers();
       if (dropTimeoutRef.current !== null) window.clearTimeout(dropTimeoutRef.current);
       const connection = connRef.current;
       connRef.current = null;
@@ -394,8 +579,22 @@ export default function Forza4() {
   }, []);
 
   const connectToPeer = () => {
-    if (!peerRef.current || !peerReady || connecting) return;
+    if (!peerRef.current || !peerReady || connectionState === 'connecting') return;
     startOutgoingConnection(peerRef.current, remoteId);
+  };
+
+  const startLocalGame = () => {
+    intentionalDisconnectRef.current = true;
+    sessionStartedRef.current = false;
+    clearConnectionTimeout();
+    clearReconnectTimers();
+    const connection = connRef.current;
+    connRef.current = null;
+    connection?.close();
+    resetSession('local');
+    setPlayer(0);
+    updateConnectionState('idle');
+    startRound(1, 1);
   };
 
   const copyLink = async () => {
@@ -419,14 +618,14 @@ export default function Forza4() {
   };
 
   const handleColumnSelection = (col: number) => {
-    if (gameState !== 'playing' || boardRef.current[0][col] !== 0) return;
-    if (mode === 'local') {
-      processMove(col, currentPlayerRef.current);
+    if (gameStateRef.current !== 'playing' || boardRef.current[0][col] !== 0) return;
+    const player = currentPlayerRef.current;
+    if (modeRef.current === 'local') {
+      processMove(col, player);
       return;
     }
-    if (!myTurn || myPlayerNum === 0 || !connRef.current?.open || currentPlayerRef.current !== myPlayerNum) return;
-    const didMove = processMove(col, myPlayerNum);
-    if (didMove) connRef.current.send({ type: 'move', col, playerNum: myPlayerNum } satisfies PeerMessage);
+    if (connectionStateRef.current !== 'connected' || myPlayerNumRef.current !== player || !connRef.current?.open) return;
+    if (processMove(col, player)) connRef.current.send({ type: 'move', col, playerNum: player } satisfies PeerMessage);
   };
 
   const handleBoardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -438,11 +637,11 @@ export default function Forza4() {
   };
 
   const requestRestart = () => {
-    if (mode === 'local') {
+    if (modeRef.current === 'local') {
       startNextRound();
       return;
     }
-    if (!connRef.current?.open) {
+    if (!connRef.current?.open || connectionStateRef.current !== 'connected') {
       setStatusText('La connessione con l’avversario è interrotta');
       setStatusError(true);
       return;
@@ -463,8 +662,22 @@ export default function Forza4() {
     connRef.current?.send({ type: 'restart-decline' } satisfies PeerMessage);
   };
 
+  const retryConnection = () => {
+    if (modeRef.current !== 'online' || !sessionStartedRef.current) return;
+    clearReconnectTimers();
+    reconnectDeadlineRef.current = Date.now() + RECONNECT_GRACE_MS;
+    updateConnectionState('reconnecting');
+    setStatusError(false);
+    setStatusText(isHostRef.current ? 'Attendo il rientro dell’avversario…' : 'Provo a riconnettermi…');
+    reconnectExpiryRef.current = window.setTimeout(expireReconnect, RECONNECT_GRACE_MS);
+    if (!isHostRef.current) scheduleGuestReconnect(100);
+  };
+
   const exitToMenu = () => {
-    hasConnectedRef.current = false;
+    intentionalDisconnectRef.current = true;
+    sessionStartedRef.current = false;
+    clearReconnectTimers();
+    clearConnectionTimeout();
     const connection = connRef.current;
     connRef.current = null;
     connection?.close();
@@ -474,10 +687,11 @@ export default function Forza4() {
 
   const inviteUrl = myId ? `${window.location.origin}${window.location.pathname}#/forza4?id=${myId}` : '';
   const playerLabel = myPlayerNum === 1 ? 'Rosso' : myPlayerNum === 2 ? 'Giallo' : '';
+  const myTurn = mode === 'online' && connectionState === 'connected' && myPlayerNum === currentPlayer;
   const canPlay = mode === 'local' || myTurn;
   const endTitle = mode === 'local'
     ? winner === 1 ? 'ROSSO\nVINCE' : winner === 2 ? 'GIALLO\nVINCE' : 'PAREGGIO'
-    : winner === myPlayerNum ? 'HAI\nVINTO' : winner === 0 ? 'PAREGGIO' : winner === -1 ? 'AVVERSARIO\nUSCITO' : 'HAI\nPERSO';
+    : winner === myPlayerNum ? 'HAI\nVINTO' : winner === 0 ? 'PAREGGIO' : 'HAI\nPERSO';
 
   return (
     <div className="game-screen flex w-full flex-col items-center bg-slate-950 px-3 pb-safe pt-safe text-white sm:px-6">
@@ -486,17 +700,17 @@ export default function Forza4() {
       <header className="game-compact-header mb-5 mt-16 shrink-0 text-center sm:mt-20">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300">Online P2P · oppure sullo stesso telefono</p>
         <h1 className="mt-2 bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-4xl font-black tracking-[-0.04em] text-transparent sm:text-5xl">FORZA 4</h1>
-        <div className={clsx('mt-2 text-xs font-bold', statusError ? 'text-red-400' : 'text-slate-500')} role="status" aria-live="polite">{statusText}</div>
+        <div className={clsx('mt-2 text-xs font-bold', statusError ? 'text-red-400' : connectionState === 'reconnecting' ? 'text-amber-300' : 'text-slate-500')} role="status" aria-live="polite">{statusText}</div>
       </header>
 
       {gameState === 'setup' && (
         <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center pb-8">
           {!initialJoinIdRef.current && (
             <div className="mb-4 grid w-full grid-cols-2 gap-3">
-              <button type="button" onClick={() => { setMode('online'); setStatusText('Condividi il codice o entra in una partita'); }} className={clsx('rounded-2xl border p-4 text-left transition', mode === 'online' ? 'border-blue-400/40 bg-blue-500/10' : 'border-white/[0.07] bg-white/[0.035]')}>
+              <button type="button" onClick={() => { updateMode('online'); setStatusText('Condividi il codice o entra in una partita'); }} className={clsx('rounded-2xl border p-4 text-left transition', mode === 'online' ? 'border-blue-400/40 bg-blue-500/10' : 'border-white/[0.07] bg-white/[0.035]')}>
                 <Globe2 className="mb-3 h-6 w-6 text-blue-300" aria-hidden="true" /><p className="text-sm font-black">Online</p><p className="mt-1 text-[11px] leading-5 text-slate-500">Due telefoni, codice o link.</p>
               </button>
-              <button type="button" onClick={() => { setMode('local'); setStatusText('Pronto per una partita sullo stesso telefono'); }} className={clsx('rounded-2xl border p-4 text-left transition', mode === 'local' ? 'border-violet-400/40 bg-violet-500/10' : 'border-white/[0.07] bg-white/[0.035]')}>
+              <button type="button" onClick={() => { updateMode('local'); setStatusText('Pronto per una partita sullo stesso telefono'); }} className={clsx('rounded-2xl border p-4 text-left transition', mode === 'local' ? 'border-violet-400/40 bg-violet-500/10' : 'border-white/[0.07] bg-white/[0.035]')}>
                 <Smartphone className="mb-3 h-6 w-6 text-violet-300" aria-hidden="true" /><p className="text-sm font-black">Sul telefono</p><p className="mt-1 text-[11px] leading-5 text-slate-500">Passa il telefono a ogni turno.</p>
               </button>
             </div>
@@ -524,8 +738,8 @@ export default function Forza4() {
 
               <section className="w-full rounded-[2rem] border border-white/[0.08] bg-slate-900/70 p-5 shadow-2xl sm:p-6" aria-labelledby="join-heading">
                 <label id="join-heading" htmlFor="room-code" className="block text-center text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{initialJoinIdRef.current ? 'Codice dell’invito' : 'Oppure inserisci un codice host'}</label>
-                <input id="room-code" type="text" value={remoteId} onChange={event => setRemoteId(normalizeCode(event.target.value))} onKeyDown={event => { if (event.key === 'Enter') connectToPeer(); }} placeholder="ES. A1B2C3" maxLength={6} autoCapitalize="characters" autoComplete="off" spellCheck={false} className="mt-3 w-full rounded-xl border border-white/[0.08] bg-black/20 px-4 py-3.5 text-center text-2xl font-black uppercase tracking-[0.14em] text-white outline-none placeholder:text-slate-700 focus:border-blue-400/50" />
-                <button type="button" onClick={connectToPeer} disabled={!peerReady || connecting} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 px-6 py-4 text-base font-black uppercase tracking-wide text-white disabled:opacity-50"><Play className="h-5 w-5 fill-current" aria-hidden="true" />{connecting ? 'Connessione…' : initialJoinIdRef.current ? 'Riprova' : 'Partecipa'}</button>
+                <input id="room-code" type="text" value={remoteId} onChange={event => { const code = normalizeCode(event.target.value); setRemoteId(code); remoteIdRef.current = code; }} onKeyDown={event => { if (event.key === 'Enter') connectToPeer(); }} placeholder="ES. A1B2C3" maxLength={6} autoCapitalize="characters" autoComplete="off" spellCheck={false} className="mt-3 w-full rounded-xl border border-white/[0.08] bg-black/20 px-4 py-3.5 text-center text-2xl font-black uppercase tracking-[0.14em] text-white outline-none placeholder:text-slate-700 focus:border-blue-400/50" />
+                <button type="button" onClick={connectToPeer} disabled={!peerReady || connectionState === 'connecting'} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 px-6 py-4 text-base font-black uppercase tracking-wide text-white disabled:opacity-50"><Play className="h-5 w-5 fill-current" aria-hidden="true" />{connectionState === 'connecting' ? 'Connessione…' : initialJoinIdRef.current ? 'Riprova' : 'Partecipa'}</button>
               </section>
             </>
           )}
@@ -534,21 +748,29 @@ export default function Forza4() {
 
       {(gameState === 'playing' || gameState === 'end') && (
         <main className="flex w-full max-w-lg flex-col items-center pb-5">
-          <div className="mb-3 grid w-full max-w-sm grid-cols-3 gap-2 text-center">
+          <div className="mb-3 grid w-full max-w-sm grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2 text-center">
             <div className="rounded-xl border border-red-400/10 bg-red-500/[0.06] px-3 py-2"><p className="text-[9px] font-black uppercase text-red-300">Rosso</p><p className="text-xl font-black">{score.red}</p></div>
+            <span className="text-[9px] font-black text-slate-700">·</span>
             <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2"><p className="text-[9px] font-black uppercase text-slate-500">Pari</p><p className="text-xl font-black">{score.draws}</p></div>
+            <span className="text-[9px] font-black text-slate-700">·</span>
             <div className="rounded-xl border border-yellow-400/10 bg-yellow-500/[0.06] px-3 py-2"><p className="text-[9px] font-black uppercase text-yellow-300">Giallo</p><p className="text-xl font-black">{score.yellow}</p></div>
           </div>
+          <p className="mb-3 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600">Round {roundNumber}</p>
 
           <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
             <div className="flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.045] px-4 py-2.5 shadow-lg">
               <span className={clsx('h-3.5 w-3.5 rounded-full', currentPlayer === 1 ? 'bg-red-500' : 'bg-yellow-400')} aria-hidden="true" />
               <span className="text-xs font-black uppercase tracking-wide text-slate-300 sm:text-sm">{gameState === 'end' ? 'Round concluso' : mode === 'local' ? `Tocca a ${currentPlayer === 1 ? 'Rosso' : 'Giallo'}` : myTurn ? 'Tocca a te' : 'Turno avversario'}</span>
             </div>
-            {mode === 'online' && playerLabel && <div className="rounded-full border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-500">Tu: <span className="text-slate-300">{playerLabel}</span></div>}
+            {mode === 'online' && (
+              <div className="flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                {connectionState === 'connected' ? <Wifi className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" /> : <WifiOff className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />}
+                {connectionState === 'reconnecting' ? 'Riconnessione' : connectionState === 'lost' ? 'Offline' : playerLabel ? `Tu: ${playerLabel}` : 'Online'}
+              </div>
+            )}
           </div>
 
-          <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">Tocca una colonna · tastiera 1–7</p>
+          <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">{connectionState === 'reconnecting' ? 'Partita in pausa durante la riconnessione' : connectionState === 'lost' ? 'Riconnetti per continuare la sessione' : 'Tocca una colonna · tastiera 1–7'}</p>
 
           <div className="relative inline-block max-w-full">
             {gameState === 'end' && !fallingToken && <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[1.25rem] bg-slate-950/75 p-4 backdrop-blur-sm"><h2 className={clsx('whitespace-pre-line text-center text-4xl font-black uppercase leading-none drop-shadow-lg sm:text-5xl', winner === 0 ? 'text-white' : mode === 'local' ? (winner === 1 ? 'text-red-300' : 'text-yellow-300') : winner === myPlayerNum ? 'text-emerald-300' : 'text-red-400')}>{endTitle}</h2></div>}
@@ -563,7 +785,7 @@ export default function Forza4() {
             </div>
           </div>
 
-          {incomingRestart && (
+          {incomingRestart && connectionState === 'connected' && (
             <div className="mt-5 w-full max-w-sm rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.08] p-4 text-center">
               <p className="text-sm font-black text-white">L’avversario chiede la rivincita</p><p className="mt-1 text-xs text-slate-400">Il primo giocatore cambierà rispetto al round precedente.</p>
               <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={declineRestart} className="rounded-xl border border-white/[0.08] py-3 text-xs font-black text-slate-400">Rifiuta</button><button type="button" onClick={acceptRestart} className="rounded-xl bg-emerald-500 py-3 text-xs font-black text-white">Accetta</button></div>
@@ -571,7 +793,8 @@ export default function Forza4() {
           )}
 
           <div className="mt-5 flex w-full max-w-xs flex-col gap-3">
-            {gameState === 'end' && winner !== -1 && !incomingRestart && <button type="button" onClick={requestRestart} disabled={restartRequested} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 py-4 text-base font-black uppercase tracking-wide text-white disabled:opacity-50"><RotateCcw className="h-5 w-5" aria-hidden="true" />{mode === 'online' && restartRequested ? 'In attesa…' : 'Gioca ancora'}</button>}
+            {gameState === 'end' && !incomingRestart && (mode === 'local' || connectionState === 'connected') && <button type="button" onClick={requestRestart} disabled={restartRequested} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 py-4 text-base font-black uppercase tracking-wide text-white disabled:opacity-50"><RotateCcw className="h-5 w-5" aria-hidden="true" />{mode === 'online' && restartRequested ? 'In attesa…' : 'Gioca ancora'}</button>}
+            {mode === 'online' && connectionState === 'lost' && <button type="button" onClick={retryConnection} className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/20 bg-amber-500/10 py-3.5 text-xs font-black uppercase tracking-wider text-amber-200"><RefreshCw className="h-4 w-4" aria-hidden="true" /> Riprova connessione</button>}
             <button type="button" onClick={exitToMenu} className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.035] py-3.5 text-xs font-black uppercase tracking-wider text-slate-500"><DoorOpen className="h-4 w-4" aria-hidden="true" /> Esci dalla partita</button>
           </div>
         </main>
