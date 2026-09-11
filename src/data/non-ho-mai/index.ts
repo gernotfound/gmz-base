@@ -5,11 +5,11 @@ import { dataImbarazzo } from './data_imbarazzo';
 import { dataSocial } from './data_social';
 import { dataConfini } from './data_confini';
 
-export const categoriesData: Record<string, string[]> = {
+export const categoriesData: Record<string, readonly string[]> = {
   Hot: dataHot,
   Love: dataLove,
   Situazioni: dataSituazioni,
   Imbarazzo: dataImbarazzo,
   Social: dataSocial,
-  Confini: dataConfini
+  Confini: dataConfini,
 };
