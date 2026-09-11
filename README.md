@@ -1,8 +1,10 @@
 # GMZ Base
 
-GMZ Base è un piccolo arcade web costruito con React, TypeScript, Vite e Tailwind CSS. Il progetto è pubblicato come PWA su GitHub Pages e usa routing hash-based, quindi ogni gioco resta raggiungibile anche su hosting statico.
+GMZ Base è un arcade web costruito con React, TypeScript, Vite e Tailwind CSS. Il progetto è pubblicato come PWA su GitHub Pages e usa routing hash-based, quindi ogni gioco resta raggiungibile anche su hosting statico.
 
 ## Sviluppo
+
+Il package manager di riferimento è **Bun**. Manteniamo un solo ecosistema di installazione per evitare lockfile divergenti.
 
 ```bash
 bun install
@@ -30,6 +32,22 @@ Per aggiungere un gioco:
 
 Non serve duplicare markup nella home né aggiungere manualmente una nuova `<Route>`.
 
+## Layout mobile
+
+Le pagine di gioco usano le utility condivise `game-screen`, `game-overlay-screen`, safe-area e il componente `GameHomeButton`. La strategia viewport include fallback `vh`, `svh` e `dvh`, così browser mobile e PWA Android/iOS gestiscono meglio barre dinamiche, notch e home indicator.
+
+Per verifiche manuali, prova almeno:
+
+- 320–360 px di larghezza;
+- uno schermo Android basso (circa 640–720 px di altezza);
+- orientamento portrait con barra browser visibile;
+- PWA standalone;
+- `prefers-reduced-motion` attivo.
+
+## Dinamiche dei quiz
+
+`src/lib/quiz.ts` costruisce set bilanciati tra le due risposte, mantenendo la casualità ma impedendo sequenze superiori a due risposte uguali. In questo modo non conviene indovinare seguendo soltanto la frequenza statistica.
+
 ## Duce o Non Duce · Pro
 
 Le immagini ottimizzate vivono in `public/img_dndpro`. I file che iniziano con `d` sono classificati come Duce; quelli che iniziano con `nd` come Non Duce.
@@ -44,4 +62,4 @@ Lo script converte le immagini in WebP 800×800 e rigenera `src/data/dnd/images.
 
 ## Deploy
 
-Ogni push su `main` avvia un solo workflow GitHub Pages. Il workflow usa il lockfile Bun in modalità frozen, esegue type-check + build e pubblica `dist`.
+Ogni push su `main` avvia il workflow GitHub Pages. Il workflow installa con Bun, esegue type-check + build e pubblica `dist`. Per limitare deploy superflui, le modifiche applicative vanno aggregate prima del push su `main`.

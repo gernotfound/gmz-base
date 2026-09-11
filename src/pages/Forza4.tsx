@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, Copy, DoorOpen, Home as HomeIcon, Play, RotateCcw } from 'lucide-react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Check, Copy, DoorOpen, Play, RotateCcw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import Peer, { type DataConnection } from 'peerjs';
 import clsx from 'clsx';
+import GameHomeButton from '../components/GameHomeButton';
 
 const ROWS = 6;
 const COLS = 7;
@@ -11,6 +12,8 @@ const CONNECTION_TIMEOUT_MS = 8_000;
 
 type GameState = 'setup' | 'playing' | 'end';
 type PlayerNumber = 0 | 1 | 2;
+type CellPosition = { row: number; col: number };
+type FallingToken = CellPosition & { player: 1 | 2; id: number };
 type PeerMessage =
   | { type: 'move'; col: number; playerNum: 1 | 2 }
   | { type: 'restart' };
@@ -31,6 +34,10 @@ function isValidCode(value: string) {
   return /^[A-Z0-9]{4,6}$/.test(value);
 }
 
+function getDropDuration(row: number) {
+  return 300 + row * 48;
+}
+
 function isPeerMessage(data: unknown): data is PeerMessage {
   if (!data || typeof data !== 'object') return false;
   const message = data as { type?: unknown; col?: unknown; playerNum?: unknown };
@@ -44,6 +51,42 @@ function isPeerMessage(data: unknown): data is PeerMessage {
     message.col < COLS &&
     (message.playerNum === 1 || message.playerNum === 2)
   );
+}
+
+function findWinningCells(board: number[][], row: number, col: number, player: number): CellPosition[] {
+  const directions = [
+    [0, 1],
+    [1, 0],
+    [1, 1],
+    [1, -1],
+  ] as const;
+
+  for (const [rowDelta, colDelta] of directions) {
+    const cells: CellPosition[] = [{ row, col }];
+
+    for (const direction of [-1, 1] as const) {
+      let step = 1;
+      while (true) {
+        const nextRow = row + rowDelta * step * direction;
+        const nextCol = col + colDelta * step * direction;
+        if (
+          nextRow < 0 ||
+          nextRow >= ROWS ||
+          nextCol < 0 ||
+          nextCol >= COLS ||
+          board[nextRow][nextCol] !== player
+        ) {
+          break;
+        }
+        cells.push({ row: nextRow, col: nextCol });
+        step += 1;
+      }
+    }
+
+    if (cells.length >= 4) return cells;
+  }
+
+  return [];
 }
 
 export default function Forza4() {
@@ -63,22 +106,35 @@ export default function Forza4() {
   const [myPlayerNum, setMyPlayerNum] = useState<PlayerNumber>(0);
   const [myTurn, setMyTurn] = useState(false);
   const [winner, setWinner] = useState<number | null>(null);
+  const [winningCells, setWinningCells] = useState<CellPosition[]>([]);
+  const [fallingToken, setFallingToken] = useState<FallingToken | null>(null);
 
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const connectionTimeoutRef = useRef<number | null>(null);
+  const dropTimeoutRef = useRef<number | null>(null);
+  const fallingTokenIdRef = useRef(0);
   const boardRef = useRef(board);
   const isHostRef = useRef(false);
   const myPlayerNumRef = useRef<PlayerNumber>(0);
   const myTurnRef = useRef(false);
   const gameOverRef = useRef(false);
   const hasConnectedRef = useRef(false);
+  const roundStarterRef = useRef<1 | 2>(1);
 
   const clearConnectionTimeout = () => {
     if (connectionTimeoutRef.current !== null) {
       window.clearTimeout(connectionTimeoutRef.current);
       connectionTimeoutRef.current = null;
     }
+  };
+
+  const clearDropAnimation = () => {
+    if (dropTimeoutRef.current !== null) {
+      window.clearTimeout(dropTimeoutRef.current);
+      dropTimeoutRef.current = null;
+    }
+    setFallingToken(null);
   };
 
   const setTurn = (value: boolean) => {
@@ -91,42 +147,22 @@ export default function Forza4() {
     setMyPlayerNum(value);
   };
 
-  const evaluateWinConditions = (currentBoard: number[][], row: number, col: number, player: number) => {
-    const axes = [
-      [[0, 1], [0, -1]],
-      [[1, 0], [-1, 0]],
-      [[1, 1], [-1, -1]],
-      [[1, -1], [-1, 1]],
-    ];
+  const evaluateDrawCondition = (currentBoard: number[][]) => currentBoard[0].every(cell => cell !== 0);
 
-    for (const axis of axes) {
-      let count = 1;
-      for (const [rowDelta, colDelta] of axis) {
-        let step = 1;
-        while (true) {
-          const nextRow = row + rowDelta * step;
-          const nextCol = col + colDelta * step;
-          if (
-            nextRow >= 0 &&
-            nextRow < ROWS &&
-            nextCol >= 0 &&
-            nextCol < COLS &&
-            currentBoard[nextRow][nextCol] === player
-          ) {
-            count += 1;
-            step += 1;
-          } else {
-            break;
-          }
-        }
-      }
-      if (count >= 4) return true;
+  const animateDrop = (row: number, col: number, player: 1 | 2) => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      clearDropAnimation();
+      return;
     }
 
-    return false;
+    if (dropTimeoutRef.current !== null) window.clearTimeout(dropTimeoutRef.current);
+    fallingTokenIdRef.current += 1;
+    setFallingToken({ row, col, player, id: fallingTokenIdRef.current });
+    dropTimeoutRef.current = window.setTimeout(() => {
+      setFallingToken(null);
+      dropTimeoutRef.current = null;
+    }, getDropDuration(row) + 40);
   };
-
-  const evaluateDrawCondition = (currentBoard: number[][]) => currentBoard[0].every(cell => cell !== 0);
 
   const processMove = (col: number, playerNum: 1 | 2) => {
     if (gameOverRef.current || col < 0 || col >= COLS || boardRef.current[0][col] !== 0) return false;
@@ -146,14 +182,18 @@ export default function Forza4() {
 
     boardRef.current = nextBoard;
     setBoard(nextBoard);
+    animateDrop(placedRow, col, playerNum);
 
-    if (evaluateWinConditions(nextBoard, placedRow, col, playerNum)) {
+    const winCells = findWinningCells(nextBoard, placedRow, col, playerNum);
+    if (winCells.length >= 4) {
       gameOverRef.current = true;
+      setWinningCells(winCells);
       setWinner(playerNum);
       setGameState('end');
       setTurn(false);
     } else if (evaluateDrawCondition(nextBoard)) {
       gameOverRef.current = true;
+      setWinningCells([]);
       setWinner(0);
       setGameState('end');
       setTurn(false);
@@ -165,19 +205,24 @@ export default function Forza4() {
   };
 
   const executeRestart = () => {
+    clearDropAnimation();
     const emptyBoard = createEmptyBoard();
+    const nextStarter = roundStarterRef.current === 1 ? 2 : 1;
+    roundStarterRef.current = nextStarter;
     boardRef.current = emptyBoard;
     setBoard(emptyBoard);
+    setWinningCells([]);
     gameOverRef.current = false;
     setWinner(null);
     setGameState('playing');
-    setStatusText('Partita in corso');
+    setStatusText(`Nuovo round · parte ${nextStarter === 1 ? 'Rosso' : 'Giallo'}`);
     setStatusError(false);
-    setTurn(isHostRef.current);
+    setTurn(myPlayerNumRef.current === nextStarter);
   };
 
   const handleDisconnect = () => {
     clearConnectionTimeout();
+    clearDropAnimation();
     setConnecting(false);
     if (!hasConnectedRef.current) return;
 
@@ -199,7 +244,7 @@ export default function Forza4() {
       hasConnectedRef.current = true;
       setConnecting(false);
       setGameState('playing');
-      setStatusText('Partita in corso');
+      setStatusText('Partita in corso · parte Rosso');
       setStatusError(false);
       setSearchParams({});
     });
@@ -248,10 +293,12 @@ export default function Forza4() {
     }
 
     clearConnectionTimeout();
+    clearDropAnimation();
     const previousConnection = connRef.current;
     connRef.current = null;
     previousConnection?.close();
     hasConnectedRef.current = false;
+    roundStarterRef.current = 1;
     isHostRef.current = false;
     setPlayer(2);
     setTurn(false);
@@ -298,10 +345,12 @@ export default function Forza4() {
       }
 
       clearConnectionTimeout();
+      clearDropAnimation();
       const previousConnection = connRef.current;
       connRef.current = null;
       previousConnection?.close();
       setConnecting(false);
+      roundStarterRef.current = 1;
       isHostRef.current = true;
       setPlayer(1);
       setTurn(true);
@@ -325,6 +374,7 @@ export default function Forza4() {
     return () => {
       hasConnectedRef.current = false;
       clearConnectionTimeout();
+      if (dropTimeoutRef.current !== null) window.clearTimeout(dropTimeoutRef.current);
       const connection = connRef.current;
       connRef.current = null;
       connection?.close();
@@ -399,20 +449,13 @@ export default function Forza4() {
   };
 
   const inviteUrl = myId ? `${window.location.origin}${window.location.pathname}#/forza4?id=${myId}` : '';
+  const playerLabel = myPlayerNum === 1 ? 'Rosso' : myPlayerNum === 2 ? 'Giallo' : '';
 
   return (
-    <div className="flex min-h-[100dvh] w-full flex-col items-center bg-slate-950 px-3 pb-safe pt-safe text-white sm:px-6">
-      {gameState === 'setup' && (
-        <Link
-          to="/"
-          aria-label="Torna al catalogo"
-          className="absolute left-4 top-4 z-30 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.08] bg-slate-900/80 text-slate-300 shadow-lg backdrop-blur transition hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 sm:left-6 sm:top-6"
-        >
-          <HomeIcon className="h-5 w-5" aria-hidden="true" />
-        </Link>
-      )}
+    <div className="game-screen flex w-full flex-col items-center bg-slate-950 px-3 pb-safe pt-safe text-white sm:px-6">
+      {gameState === 'setup' && <GameHomeButton tone="blue" />}
 
-      <header className="mb-5 mt-16 shrink-0 text-center sm:mt-20">
+      <header className="game-compact-header mb-5 mt-16 shrink-0 text-center sm:mt-20">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300">Multiplayer P2P</p>
         <h1 className="mt-2 bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-4xl font-black tracking-[-0.04em] text-transparent sm:text-5xl">FORZA 4</h1>
         <div className={clsx('mt-2 text-xs font-bold', statusError ? 'text-red-400' : 'text-slate-500')} role="status" aria-live="polite">
@@ -490,24 +533,33 @@ export default function Forza4() {
 
       {(gameState === 'playing' || gameState === 'end') && (
         <main className="flex w-full max-w-lg flex-col items-center pb-5">
-          <div className="mb-5 flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.045] px-5 py-2.5 shadow-lg">
-            <span
-              className={clsx(
-                'h-3.5 w-3.5 rounded-full shadow-inner transition',
-                gameState === 'playing' && myTurn ? (myPlayerNum === 1 ? 'bg-red-500' : 'bg-yellow-400') : 'bg-slate-700',
-              )}
-              aria-hidden="true"
-            />
-            <span className="text-sm font-black uppercase tracking-wide text-slate-300">
-              {gameState === 'end' ? 'Partita conclusa' : myTurn ? 'Tocca a te' : 'Turno avversario'}
-            </span>
+          <div className="mb-3 flex flex-wrap items-center justify-center gap-2 sm:mb-5">
+            <div className="flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.045] px-4 py-2.5 shadow-lg">
+              <span
+                className={clsx(
+                  'h-3.5 w-3.5 rounded-full shadow-inner transition',
+                  gameState === 'playing' && myTurn ? (myPlayerNum === 1 ? 'bg-red-500' : 'bg-yellow-400') : 'bg-slate-700',
+                )}
+                aria-hidden="true"
+              />
+              <span className="text-xs font-black uppercase tracking-wide text-slate-300 sm:text-sm">
+                {gameState === 'end' ? 'Partita conclusa' : myTurn ? 'Tocca a te' : 'Turno avversario'}
+              </span>
+            </div>
+            {playerLabel && (
+              <div className="flex items-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                Tu
+                <span className={clsx('h-3 w-3 rounded-full', myPlayerNum === 1 ? 'bg-red-500' : 'bg-yellow-400')} aria-hidden="true" />
+                <span className="text-slate-300">{playerLabel}</span>
+              </div>
+            )}
           </div>
 
           <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">Tocca una colonna · da tastiera premi 1–7</p>
 
           <div className="relative inline-block max-w-full">
-            {gameState === 'end' && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[1.25rem] bg-slate-950/75 p-4 backdrop-blur-sm">
+            {gameState === 'end' && !fallingToken && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[1.25rem] bg-slate-950/75 p-4 backdrop-blur-sm">
                 <h2
                   className={clsx(
                     'whitespace-pre-line text-center text-4xl font-black uppercase leading-none drop-shadow-lg sm:text-5xl',
@@ -527,23 +579,51 @@ export default function Forza4() {
               aria-disabled={!myTurn}
               onKeyDown={handleBoardKeyDown}
             >
+              {fallingToken && (
+                <div
+                  key={fallingToken.id}
+                  className="connect-four-falling-slot"
+                  style={
+                    {
+                      '--drop-col': fallingToken.col,
+                      '--drop-row': fallingToken.row,
+                      '--drop-duration': `${getDropDuration(fallingToken.row)}ms`,
+                    } as CSSProperties
+                  }
+                  aria-hidden="true"
+                >
+                  <div className={clsx('connect-four-token', fallingToken.player === 1 ? 'connect-four-player-one' : 'connect-four-player-two')} />
+                </div>
+              )}
+
               {board.map((row, rowIndex) =>
-                row.map((cell, colIndex) => (
-                  <div
-                    key={`${rowIndex}-${colIndex}`}
-                    className={clsx('connect-four-cell', gameState === 'playing' && myTurn && board[0][colIndex] === 0 && 'connect-four-cell-active')}
-                    role="gridcell"
-                    aria-label={`Riga ${rowIndex + 1}, colonna ${colIndex + 1}${cell === 0 ? ', vuota' : cell === 1 ? ', gettone rosso' : ', gettone giallo'}`}
-                    onClick={() => handleColumnSelection(colIndex)}
-                  >
-                    {cell !== 0 && <div className={clsx('connect-four-token', cell === 1 ? 'connect-four-player-one' : 'connect-four-player-two')} aria-hidden="true" />}
-                  </div>
-                )),
+                row.map((cell, colIndex) => {
+                  const isFallingDestination = fallingToken?.row === rowIndex && fallingToken.col === colIndex;
+                  const isWinning = winningCells.some(position => position.row === rowIndex && position.col === colIndex);
+
+                  return (
+                    <div
+                      key={`${rowIndex}-${colIndex}`}
+                      className={clsx(
+                        'connect-four-cell',
+                        gameState === 'playing' && myTurn && board[0][colIndex] === 0 && 'connect-four-cell-active',
+                        isWinning && 'connect-four-cell-winning',
+                      )}
+                      role="gridcell"
+                      aria-label={`Riga ${rowIndex + 1}, colonna ${colIndex + 1}${cell === 0 ? ', vuota' : cell === 1 ? ', gettone rosso' : ', gettone giallo'}`}
+                      onClick={() => handleColumnSelection(colIndex)}
+                    >
+                      {cell !== 0 && !isFallingDestination && (
+                        <div className={clsx('connect-four-token', cell === 1 ? 'connect-four-player-one' : 'connect-four-player-two')} aria-hidden="true" />
+                      )}
+                    </div>
+                  );
+                }),
               )}
             </div>
           </div>
 
-          <div className="mt-6 flex w-full max-w-xs flex-col gap-3">
+          <div className="mt-5 flex w-full max-w-xs flex-col gap-3 sm:mt-6">
             {gameState === 'end' && winner !== -1 && (
               <button
                 type="button"

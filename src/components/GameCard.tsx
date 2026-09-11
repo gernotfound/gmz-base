@@ -40,21 +40,21 @@ export default function GameCard({ game }: GameCardProps) {
     <Link
       to={game.path}
       aria-label={`Apri ${game.title}`}
-      className={`group relative isolate flex min-h-[300px] flex-col overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-slate-900/70 p-5 shadow-[0_20px_70px_rgba(2,6,23,0.35)] backdrop-blur-xl transition duration-300 hover:-translate-y-1.5 hover:bg-slate-900/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 ${tone.border}`}
+      className={`game-card group relative isolate flex min-h-[218px] flex-col overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-slate-900/70 p-4 shadow-[0_16px_50px_rgba(2,6,23,0.3)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:bg-slate-900/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 sm:min-h-[300px] sm:rounded-[1.75rem] sm:p-5 sm:hover:-translate-y-1.5 ${tone.border}`}
     >
       <div aria-hidden="true" className={`absolute -right-16 -top-16 -z-10 h-40 w-40 rounded-full blur-3xl transition duration-500 group-hover:scale-125 ${tone.glow}`} />
 
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br text-2xl shadow-lg ring-1 ring-white/15 ${tone.icon}`} aria-hidden="true">
+      <div className="mb-4 flex items-start justify-between gap-3 sm:mb-5">
+        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-xl shadow-lg ring-1 ring-white/15 sm:h-14 sm:w-14 sm:text-2xl ${tone.icon}`} aria-hidden="true">
           {game.icon}
         </div>
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-1.5 sm:gap-2">
           {game.featured && (
-            <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-violet-200">
+            <span className="hidden rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-violet-200 sm:inline-flex">
               In evidenza
             </span>
           )}
-          <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${tone.badge}`}>
+          <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] sm:text-[10px] sm:tracking-[0.16em] ${tone.badge}`}>
             {game.category}
           </span>
         </div>
@@ -62,10 +62,10 @@ export default function GameCard({ game }: GameCardProps) {
 
       <div className="flex-1">
         <h2 className="text-xl font-black tracking-tight text-white sm:text-2xl">{game.title}</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-400">{game.description}</p>
+        <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-400 sm:line-clamp-3 sm:leading-6">{game.description}</p>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2" aria-label="Tag">
+      <div className="mt-5 hidden flex-wrap gap-2 sm:flex" aria-label="Tag">
         {game.tags.slice(0, 3).map(tag => (
           <span key={tag} className="rounded-full bg-white/[0.045] px-2.5 py-1 text-[11px] font-semibold text-slate-400 ring-1 ring-inset ring-white/[0.06]">
             {tag}
@@ -73,7 +73,7 @@ export default function GameCard({ game }: GameCardProps) {
         ))}
       </div>
 
-      <div className="mt-5 flex items-center justify-between border-t border-white/[0.06] pt-4 text-xs font-bold text-slate-400">
+      <div className="mt-4 flex items-center justify-between border-t border-white/[0.06] pt-3.5 text-[11px] font-bold text-slate-400 sm:mt-5 sm:pt-4 sm:text-xs">
         <span className="flex items-center gap-1.5">
           <Users className="h-3.5 w-3.5" aria-hidden="true" />
           {game.players}

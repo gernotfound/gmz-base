@@ -6,6 +6,8 @@
   background: #070b14;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 html {
@@ -17,7 +19,8 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100dvh;
+  min-height: 100vh;
+  min-height: 100svh;
   overflow-x: hidden;
   overscroll-behavior-y: none;
   background:
@@ -26,6 +29,18 @@ body {
   color: #f8fafc;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+@supports (min-height: 100dvh) {
+  body,
+  #root {
+    min-height: 100dvh;
+  }
 }
 
 button,
@@ -49,20 +64,63 @@ a {
   color: white;
 }
 
+.game-screen {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.game-overlay-screen {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+@supports (min-height: 100dvh) {
+  .game-screen {
+    min-height: 100dvh;
+  }
+
+  .game-overlay-screen {
+    height: 100dvh;
+  }
+}
+
+.game-home-button {
+  position: fixed;
+  top: max(0.75rem, env(safe-area-inset-top, 0px));
+  left: max(0.75rem, env(safe-area-inset-left, 0px));
+}
+
 .pt-safe {
-  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
 }
 
 .pb-safe {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
 .pl-safe {
-  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
 }
 
 .pr-safe {
-  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.game-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 230px;
 }
 
 .animate-fadeIn {
@@ -90,13 +148,36 @@ a {
   transform: scaleY(-1);
 }
 
+.quiz-progress {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.quiz-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 220ms ease;
+}
+
+.quiz-media {
+  max-height: 44vh;
+  max-height: 44dvh;
+}
+
 .connect-four-board {
-  --cell-size: min(52px, calc((100vw - 76px) / 7));
+  --cell-size: min(52px, calc((100vw - 72px) / 7));
+  --board-gap: clamp(4px, 1.35vw, 8px);
+  --board-pad: clamp(8px, 2vw, 14px);
+  position: relative;
   display: grid;
   grid-template-columns: repeat(7, var(--cell-size));
   grid-template-rows: repeat(6, var(--cell-size));
-  gap: clamp(4px, 1.4vw, 8px);
-  padding: clamp(8px, 2vw, 14px);
+  gap: var(--board-gap);
+  padding: var(--board-pad);
+  overflow: visible;
   border: 2px solid rgba(96, 165, 250, 0.22);
   border-radius: 20px;
   background: linear-gradient(145deg, #1d4ed8, #1e3a8a 55%, #172554);
@@ -105,6 +186,7 @@ a {
     inset 0 -10px 28px rgba(2, 6, 23, 0.32),
     0 24px 70px rgba(2, 6, 23, 0.50);
   outline: none;
+  touch-action: manipulation;
 }
 
 .connect-four-board:focus-visible {
@@ -128,7 +210,7 @@ a {
   box-shadow:
     inset 0 5px 9px rgba(0, 0, 0, 0.72),
     0 1px 0 rgba(255, 255, 255, 0.05);
-  transition: transform 150ms ease, background-color 150ms ease;
+  transition: transform 150ms ease, background-color 150ms ease, box-shadow 180ms ease;
 }
 
 .connect-four-cell-active {
@@ -140,16 +222,46 @@ a {
   transform: scale(1.035);
 }
 
+.connect-four-cell-winning {
+  background: rgba(15, 23, 42, 0.88);
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.34),
+    inset 0 5px 9px rgba(0, 0, 0, 0.5),
+    0 0 22px rgba(250, 204, 21, 0.34);
+  animation: connect-four-win-pulse 850ms ease-in-out infinite alternate;
+}
+
 .connect-four-token {
   position: absolute;
   inset: 5%;
   border-radius: 9999px;
-  transform: translateY(-320px);
-  animation: connect-four-drop 420ms cubic-bezier(0.22, 0.8, 0.3, 1.1) forwards;
   box-shadow:
     inset 0 -5px 8px rgba(0, 0, 0, 0.36),
     inset 0 5px 8px rgba(255, 255, 255, 0.30),
     0 5px 12px rgba(0, 0, 0, 0.36);
+}
+
+.connect-four-falling-slot {
+  position: absolute;
+  z-index: 8;
+  top: calc(-1 * (var(--cell-size) + var(--board-gap)));
+  left: calc(var(--board-pad) + var(--drop-col) * (var(--cell-size) + var(--board-gap)));
+  width: var(--cell-size);
+  height: var(--cell-size);
+  pointer-events: none;
+  animation: connect-four-real-drop var(--drop-duration) cubic-bezier(0.2, 0.72, 0.28, 1) forwards;
+  will-change: transform;
+}
+
+.connect-four-falling-slot::after {
+  content: "";
+  position: absolute;
+  inset: 5%;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.16);
+  filter: blur(8px);
+  opacity: 0;
+  animation: connect-four-impact var(--drop-duration) ease-out forwards;
 }
 
 .connect-four-player-one {
@@ -160,18 +272,77 @@ a {
   background: radial-gradient(circle at 32% 28%, #fef9c3, #facc15 44%, #a16207);
 }
 
-@keyframes connect-four-drop {
+@keyframes connect-four-real-drop {
   0% {
-    transform: translateY(-320px);
+    transform: translateY(0) scale(0.98);
   }
-  72% {
-    transform: translateY(4px);
+  74% {
+    transform: translateY(calc(var(--board-pad) + (var(--drop-row) + 1) * (var(--cell-size) + var(--board-gap)) + 3px)) scale(1.01);
   }
   88% {
-    transform: translateY(-7px);
+    transform: translateY(calc(var(--board-pad) + (var(--drop-row) + 1) * (var(--cell-size) + var(--board-gap)) - 5px)) scale(0.995);
   }
   100% {
-    transform: translateY(0);
+    transform: translateY(calc(var(--board-pad) + (var(--drop-row) + 1) * (var(--cell-size) + var(--board-gap)))) scale(1);
+  }
+}
+
+@keyframes connect-four-impact {
+  0%,
+  76% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  82% {
+    opacity: 0.65;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes connect-four-win-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.045);
+  }
+}
+
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .game-home-button {
+    height: 2.5rem;
+    width: 2.5rem;
+    border-radius: 0.875rem;
+  }
+}
+
+@media (max-height: 720px) and (orientation: portrait) {
+  .game-compact-header {
+    margin-top: 3rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .connect-four-board {
+    --cell-size: min(45px, calc((100vw - 72px) / 7));
+    --board-gap: clamp(3px, 1vw, 6px);
+    --board-pad: clamp(7px, 1.5vw, 10px);
+  }
+
+  .quiz-media {
+    max-height: 34vh;
+    max-height: 34dvh;
   }
 }
 

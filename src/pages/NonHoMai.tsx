@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
+  CheckCheck,
   ChevronLeft,
   ChevronRight,
   DoorOpen,
@@ -9,12 +9,13 @@ import {
   Frown,
   Hand,
   Heart,
-  Home as HomeIcon,
   Play,
   RotateCcw,
   Smartphone,
+  X,
 } from 'lucide-react';
 import clsx from 'clsx';
+import GameHomeButton from '../components/GameHomeButton';
 import { categoriesData } from '../data/non-ho-mai';
 import { shuffle } from '../lib/random';
 
@@ -30,6 +31,8 @@ const categoryConfig = {
   Confini: { icon: Hand, color: 'text-emerald-500', label: 'Confini' },
 } satisfies Record<Category, { icon: typeof Flame; color: string; label: string }>;
 
+const allCategories = Object.keys(categoryConfig) as Category[];
+
 export default function NonHoMai() {
   const [gameState, setGameState] = useState<'setup' | 'playing'>('setup');
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
@@ -41,6 +44,16 @@ export default function NonHoMai() {
     setSelectedCategories(current =>
       current.includes(category) ? current.filter(item => item !== category) : [...current, category],
     );
+    setError(false);
+  };
+
+  const selectAll = () => {
+    setSelectedCategories(allCategories);
+    setError(false);
+  };
+
+  const clearSelection = () => {
+    setSelectedCategories([]);
     setError(false);
   };
 
@@ -75,30 +88,51 @@ export default function NonHoMai() {
 
   const currentPhrase = phrases[currentIndex];
   const isLastPhrase = phrases.length > 0 && currentIndex === phrases.length - 1;
+  const selectedPhraseCount = selectedCategories.reduce((total, category) => total + categoriesData[category].length, 0);
+  const progress = phrases.length > 0 ? ((currentIndex + 1) / phrases.length) * 100 : 0;
 
   return (
-    <div className="relative flex min-h-[100dvh] w-full flex-col items-center bg-slate-950 px-4 pb-safe pt-safe text-white sm:px-6">
+    <div className="game-screen relative flex w-full flex-col items-center bg-slate-950 px-4 pb-safe pt-safe text-white sm:px-6">
       {gameState === 'setup' ? (
         <div className="z-20 mx-auto flex w-full max-w-xl flex-1 flex-col pb-8">
-          <Link
-            to="/"
-            aria-label="Torna al catalogo"
-            className="absolute left-4 top-4 z-30 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.08] bg-slate-900/80 text-slate-300 shadow-lg backdrop-blur transition hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 sm:left-6 sm:top-6"
-          >
-            <HomeIcon className="h-5 w-5" aria-hidden="true" />
-          </Link>
+          <GameHomeButton tone="pink" />
 
-          <header className="mb-7 mt-16 shrink-0 text-center sm:mt-20">
+          <header className="game-compact-header mb-7 mt-16 shrink-0 text-center sm:mt-20">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-300">Party game</p>
             <h1 className="mt-2 bg-gradient-to-r from-pink-400 to-violet-400 bg-clip-text text-4xl font-black tracking-[-0.04em] text-transparent sm:text-5xl">
               NON HO MAI
             </h1>
-            <p className="mt-2 text-sm font-semibold text-slate-400">Scegli una o più categorie e crea il tuo mazzo.</p>
+            <p className="mt-2 text-sm font-semibold text-slate-400">Scegli le categorie e crea un mazzo senza ripetizioni.</p>
           </header>
 
           <main className="flex flex-1 flex-col items-center">
-            <div className="mb-7 grid w-full grid-cols-2 gap-3 sm:grid-cols-3">
-              {(Object.keys(categoryConfig) as Category[]).map(category => {
+            <div className="mb-3 flex w-full items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black text-white">{selectedCategories.length}/{allCategories.length} categorie</p>
+                <p className="text-[10px] font-semibold text-slate-600">{selectedPhraseCount} frasi nel mazzo</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  disabled={selectedCategories.length === allCategories.length}
+                  className="flex items-center gap-1.5 rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-300 transition hover:bg-white/[0.06] disabled:opacity-30"
+                >
+                  <CheckCheck className="h-3.5 w-3.5" aria-hidden="true" /> Tutte
+                </button>
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  disabled={selectedCategories.length === 0}
+                  className="flex items-center gap-1.5 rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-400 transition hover:bg-white/[0.06] disabled:opacity-30"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" /> Azzera
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-6 grid w-full grid-cols-2 gap-3 sm:mb-7 sm:grid-cols-3">
+              {allCategories.map(category => {
                 const config = categoryConfig[category];
                 const Icon = config.icon;
                 const isSelected = selectedCategories.includes(category);
@@ -110,13 +144,13 @@ export default function NonHoMai() {
                     onClick={() => toggleCategory(category)}
                     aria-pressed={isSelected}
                     className={clsx(
-                      'relative flex min-h-32 flex-col items-center justify-center rounded-2xl border p-4 transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400',
+                      'relative flex min-h-28 flex-col items-center justify-center rounded-2xl border p-3 transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 sm:min-h-32 sm:p-4',
                       isSelected
                         ? 'border-pink-400/40 bg-pink-500/10 shadow-[0_15px_40px_rgba(236,72,153,0.10)]'
                         : 'border-white/[0.07] bg-white/[0.035] hover:bg-white/[0.06]',
                     )}
                   >
-                    <Icon className={clsx('mb-3 h-7 w-7 transition-transform', isSelected ? 'scale-110 text-white' : config.color)} aria-hidden="true" />
+                    <Icon className={clsx('mb-2.5 h-7 w-7 transition-transform sm:mb-3', isSelected ? 'scale-110 text-white' : config.color)} aria-hidden="true" />
                     <span className={clsx('text-center text-sm font-black leading-tight', isSelected ? 'text-white' : 'text-slate-300')}>
                       {config.label}
                     </span>
@@ -143,12 +177,16 @@ export default function NonHoMai() {
           </main>
         </div>
       ) : (
-        <div className="absolute inset-0 z-10 flex min-h-[100dvh] w-full flex-col bg-slate-950 animate-fadeIn">
+        <div className="game-overlay-screen z-50 flex w-full flex-col bg-slate-950 animate-fadeIn">
+          <div className="quiz-progress absolute left-0 right-0 top-0 z-30 rounded-none" aria-hidden="true">
+            <span className="bg-gradient-to-r from-pink-500 to-violet-500" style={{ width: `${progress}%` }} />
+          </div>
+
           <button
             type="button"
             onClick={nextPhrase}
             disabled={isLastPhrase}
-            className="relative flex flex-1 flex-col items-center justify-center overflow-y-auto p-7 text-white outline-none disabled:cursor-default sm:p-10"
+            className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto p-6 pb-16 pt-20 text-white outline-none disabled:cursor-default sm:p-10 sm:pb-20 sm:pt-24"
             aria-label={isLastPhrase ? 'Ultima frase del mazzo' : 'Mostra la frase successiva'}
           >
             <div className="absolute left-1/2 top-8 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap sm:top-10">
@@ -164,12 +202,12 @@ export default function NonHoMai() {
               {currentPhrase?.text}
             </h2>
 
-            <p className="absolute bottom-6 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 sm:bottom-8">
+            <p className="absolute bottom-5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 sm:bottom-8">
               {isLastPhrase ? 'Fine del mazzo' : 'Tocca per andare avanti'}
             </p>
           </button>
 
-          <nav className="flex min-h-20 w-full items-center justify-between border-t border-white/[0.06] bg-slate-900/95 px-4 pb-safe shadow-[0_-10px_35px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:px-6" aria-label="Controlli partita">
+          <nav className="flex min-h-20 w-full shrink-0 items-center justify-between border-t border-white/[0.06] bg-slate-900/95 px-4 pb-safe shadow-[0_-10px_35px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:px-6" aria-label="Controlli partita">
             <button
               type="button"
               onClick={prevPhrase}

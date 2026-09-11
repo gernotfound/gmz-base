@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ChevronRight, Flag, RotateCcw, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Flag, Home as HomeIcon, RotateCcw, Trophy } from 'lucide-react';
+import GameHomeButton from '../components/GameHomeButton';
 import { dndProImageFiles } from '../data/dnd/images';
-import { shuffle } from '../lib/random';
+import { buildBalancedQuiz } from '../lib/quiz';
 
 interface ImageQuestion {
   path: string;
@@ -16,29 +17,10 @@ const databaseImmagini: readonly ImageQuestion[] = dndProImageFiles.map(filename
   isDuce: filename.toLowerCase().startsWith('d') && !filename.toLowerCase().startsWith('nd'),
 }));
 
+const MAX_IMAGES_PER_SIDE = 10;
+
 function createQuestionSet(): ImageQuestion[] {
-  const ducePhotos = shuffle(databaseImmagini.filter(image => image.isDuce)).slice(0, 7);
-  const nonDucePhotos = shuffle(databaseImmagini.filter(image => !image.isDuce)).slice(0, 13);
-  const questions: ImageQuestion[] = [];
-  let consecutiveDuce = 0;
-
-  while (ducePhotos.length > 0 || nonDucePhotos.length > 0) {
-    const totalRemaining = ducePhotos.length + nonDucePhotos.length;
-    const canPickDuce = ducePhotos.length > 0 && consecutiveDuce < 2;
-    const shouldPickDuce = canPickDuce && (nonDucePhotos.length === 0 || Math.random() < ducePhotos.length / totalRemaining);
-
-    if (shouldPickDuce) {
-      const question = ducePhotos.pop();
-      if (question) questions.push(question);
-      consecutiveDuce += 1;
-    } else {
-      const question = nonDucePhotos.pop() ?? ducePhotos.pop();
-      if (question) questions.push(question);
-      consecutiveDuce = question?.isDuce ? consecutiveDuce + 1 : 0;
-    }
-  }
-
-  return questions;
+  return buildBalancedQuiz(databaseImmagini, image => image.isDuce, MAX_IMAGES_PER_SIDE);
 }
 
 export default function DndPro() {
@@ -48,9 +30,22 @@ export default function DndPro() {
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(false);
   const [answeredCount, setAnsweredCount] = useState(0);
+  const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
 
   const totalQuestions = questions.length;
   const currentQuestion = questions[currentQuestionIndex];
+  const progress = totalQuestions > 0 ? ((currentQuestionIndex + (answered ? 1 : 0)) / totalQuestions) * 100 : 0;
+  const accuracy = answeredCount > 0 ? Math.round((score / answeredCount) * 100) : 0;
+
+  useEffect(() => {
+    const nextQuestion = questions[currentQuestionIndex + 1];
+    if (!nextQuestion) return;
+
+    const image = new Image();
+    image.src = nextQuestion.path;
+  }, [currentQuestionIndex, questions]);
 
   const startGame = () => {
     setQuestions(createQuestionSet());
@@ -58,16 +53,24 @@ export default function DndPro() {
     setScore(0);
     setAnswered(false);
     setAnsweredCount(0);
+    setLastAnswerCorrect(null);
+    setStreak(0);
+    setBestStreak(0);
     setGameState('playing');
   };
 
   const handleAnswer = (isDuceGuess: boolean) => {
     if (answered || !currentQuestion) return;
 
-    if (currentQuestion.isDuce === isDuceGuess) {
-      setScore(current => current + 1);
-    }
+    const isCorrect = currentQuestion.isDuce === isDuceGuess;
+    setLastAnswerCorrect(isCorrect);
+    if (isCorrect) setScore(current => current + 1);
     setAnsweredCount(current => current + 1);
+    setStreak(current => {
+      const next = isCorrect ? current + 1 : 0;
+      if (isCorrect) setBestStreak(best => Math.max(best, next));
+      return next;
+    });
     setAnswered(true);
   };
 
@@ -79,11 +82,12 @@ export default function DndPro() {
 
     setCurrentQuestionIndex(index => index + 1);
     setAnswered(false);
+    setLastAnswerCorrect(null);
   };
 
   if (databaseImmagini.length === 0) {
     return (
-      <main className="flex min-h-[100dvh] items-center justify-center px-6 pb-safe pt-safe text-center text-white">
+      <main className="game-screen flex items-center justify-center px-6 pb-safe pt-safe text-center text-white">
         <div className="max-w-md rounded-3xl border border-white/[0.08] bg-slate-900/70 p-8 shadow-2xl">
           <h1 className="text-xl font-black text-amber-300">Nessuna foto trovata</h1>
           <p className="mt-3 text-sm leading-6 text-slate-400">Aggiungi le immagini in <code className="rounded bg-black/30 px-1.5 py-1 text-sky-300">public/img_dndpro</code> e rigenera il manifest con lo script immagini.</p>
@@ -96,37 +100,44 @@ export default function DndPro() {
   if (!currentQuestion && gameState === 'playing') return null;
 
   return (
-    <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-center px-4 pb-safe pt-safe text-white animate-fadeIn sm:px-6">
-      <Link
-        to="/"
-        aria-label="Torna al catalogo"
-        className="absolute left-4 top-4 z-30 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.08] bg-slate-900/80 text-slate-300 shadow-lg backdrop-blur transition hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 sm:left-6 sm:top-6"
-      >
-        <HomeIcon className="h-5 w-5" aria-hidden="true" />
-      </Link>
+    <div className="game-screen relative flex w-full flex-col items-center justify-center px-4 pb-safe pt-safe text-white animate-fadeIn sm:px-6">
+      <GameHomeButton tone="orange" />
 
       {gameState === 'playing' && currentQuestion ? (
-        <main className="mt-12 flex w-full max-w-md flex-col items-center sm:mt-10">
-          <header className="mb-5 w-full text-center">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">Quiz fotografico · Pro</p>
+        <main className="game-compact-header mt-12 flex w-full max-w-md flex-col items-center sm:mt-10">
+          <header className="mb-4 w-full text-center sm:mb-5">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">Quiz fotografico · 50/50</p>
             <h1 className="mt-2 text-3xl font-black tracking-[0.08em] text-white sm:text-4xl">
               DUCE <span className="text-orange-400">O</span>{' '}
               <span className="inline-flex items-center"><span className="flipped-n">N</span>O<span className="flipped-n">N</span> D<span className="flipped-u">U</span>CE</span>
             </h1>
           </header>
 
-          <div className="mb-3 flex w-full items-center justify-between px-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+          <div className="mb-2.5 flex w-full items-center justify-between px-2 text-xs font-bold uppercase tracking-wider text-slate-500">
             <span>Foto <strong className="text-sky-400">{currentQuestionIndex + 1}</strong>/{totalQuestions}</span>
-            <span>Punti <strong className="text-emerald-400">{score}</strong></span>
+            <span className="flex items-center gap-3">
+              <span>Serie <strong className="text-orange-300">{streak}</strong></span>
+              <span>Punti <strong className="text-emerald-400">{score}</strong></span>
+            </span>
+          </div>
+          <div className="quiz-progress mb-3 w-full" aria-hidden="true">
+            <span className="bg-gradient-to-r from-orange-400 to-red-500" style={{ width: `${progress}%` }} />
           </div>
 
-          <div className="flex min-h-[300px] w-full items-center justify-center overflow-hidden rounded-[2rem] border border-white/[0.08] bg-slate-900/70 p-3 shadow-2xl backdrop-blur-xl">
+          <div className="relative flex min-h-[250px] w-full items-center justify-center overflow-hidden rounded-[2rem] border border-white/[0.08] bg-slate-900/70 p-3 shadow-2xl backdrop-blur-xl sm:min-h-[300px]">
             <img
+              key={currentQuestion.path}
               src={currentQuestion.path}
               alt="Foto del quiz"
               decoding="async"
-              className="max-h-[48dvh] w-full rounded-[1.35rem] object-contain"
+              fetchPriority="high"
+              className="quiz-media w-full rounded-[1.35rem] object-contain animate-fadeIn"
             />
+            {answered && (
+              <div className={`absolute left-1/2 top-5 -translate-x-1/2 rounded-full border px-3 py-1.5 text-xs font-black shadow-xl backdrop-blur ${lastAnswerCorrect ? 'border-emerald-400/30 bg-emerald-500/20 text-emerald-100' : 'border-red-400/30 bg-red-500/20 text-red-100'}`} role="status" aria-live="polite">
+                {lastAnswerCorrect ? 'Corretto!' : 'Risposta sbagliata'}
+              </div>
+            )}
           </div>
 
           <div className="mt-5 flex w-full gap-3">
@@ -189,13 +200,19 @@ export default function DndPro() {
           </div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">Risultato Pro</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">Partita conclusa</h2>
-          <p className="mt-2 text-sm font-semibold text-slate-500">Hai risposto a {answeredCount} {answeredCount === 1 ? 'foto' : 'foto'} su {totalQuestions}.</p>
+          <p className="mt-2 text-sm font-semibold text-slate-500">Hai risposto a {answeredCount} foto su {totalQuestions}.</p>
 
-          <div className="my-6 w-full rounded-[2rem] border border-white/[0.08] bg-slate-900/70 p-8 shadow-2xl backdrop-blur-xl">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Risposte corrette</p>
-            <p className="mt-3 text-7xl font-black text-emerald-400">
-              {score}<span className="text-3xl text-slate-600">/{answeredCount}</span>
-            </p>
+          <div className="my-6 grid w-full grid-cols-2 gap-3">
+            <div className="rounded-[1.5rem] border border-white/[0.08] bg-slate-900/70 p-5 shadow-xl">
+              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Precisione</p>
+              <p className="mt-2 text-4xl font-black text-emerald-400">{accuracy}%</p>
+              <p className="mt-1 text-xs font-bold text-slate-600">{score}/{answeredCount || 0}</p>
+            </div>
+            <div className="rounded-[1.5rem] border border-white/[0.08] bg-slate-900/70 p-5 shadow-xl">
+              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Serie migliore</p>
+              <p className="mt-2 text-4xl font-black text-orange-300">{bestStreak}</p>
+              <p className="mt-1 text-xs font-bold text-slate-600">consecutive</p>
+            </div>
           </div>
 
           <button

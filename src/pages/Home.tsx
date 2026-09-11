@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Gamepad2, Search, Sparkles, X } from 'lucide-react';
+import { Dices, Gamepad2, Search, Sparkles, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import GameCard from '../components/GameCard';
 import { gameCategories, games, type GameCategory } from '../games/catalog';
 
 type CategoryFilter = 'Tutti' | GameCategory;
 
 export default function Home() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<CategoryFilter>('Tutti');
 
@@ -30,15 +32,21 @@ export default function Home() {
     setCategory('Tutti');
   };
 
+  const openRandomGame = () => {
+    const pool = filteredGames.length > 0 ? filteredGames : games;
+    const game = pool[Math.floor(Math.random() * pool.length)];
+    if (game) navigate(game.path);
+  };
+
   return (
-    <div className="relative min-h-[100dvh] overflow-x-hidden text-white">
+    <div className="game-screen relative overflow-x-hidden text-white">
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_12%_8%,rgba(99,102,241,0.16),transparent_28%),radial-gradient(circle_at_88%_18%,rgba(236,72,153,0.10),transparent_24%),linear-gradient(180deg,#070b14_0%,#0b1020_55%,#070b14_100%)]" />
 
       <div className="mx-auto w-full max-w-7xl px-4 pb-safe pt-safe sm:px-6 lg:px-8">
-        <header className="py-9 sm:py-14">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <header className="py-6 sm:py-12 lg:py-14">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
             <div className="max-w-3xl">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-violet-200">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-violet-200 sm:mb-5 sm:text-[11px]">
                 <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                 GMZ Base · Arcade Hub
               </div>
@@ -48,11 +56,11 @@ export default function Home() {
                   <Gamepad2 className="h-8 w-8 text-violet-300" aria-hidden="true" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-black tracking-[-0.045em] text-white sm:text-6xl lg:text-7xl">
+                  <h1 className="text-3xl font-black tracking-[-0.045em] text-white sm:text-6xl lg:text-7xl">
                     Una base per tutti i tuoi giochi.
                   </h1>
-                  <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base sm:leading-7">
-                    Scegli cosa giocare, filtra il catalogo e parti subito. L’interfaccia è pensata per crescere da pochi titoli a una libreria molto più ampia senza trasformarsi in una lista infinita.
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:mt-4 sm:text-base sm:leading-7">
+                    Trova il gioco giusto in pochi secondi. Ricerca, filtri e caricamento progressivo sono pensati per restare veloci anche quando il catalogo diventerà molto più grande.
                   </p>
                 </div>
               </div>
@@ -72,13 +80,22 @@ export default function Home() {
         </header>
 
         <main>
-          <section className="sticky top-3 z-20 mb-7 rounded-[1.5rem] border border-white/[0.08] bg-slate-950/80 p-3 shadow-[0_20px_70px_rgba(2,6,23,0.45)] backdrop-blur-2xl sm:p-4" aria-labelledby="catalog-heading">
+          <section className="mb-6 rounded-[1.5rem] border border-white/[0.08] bg-slate-950/88 p-3 shadow-[0_20px_70px_rgba(2,6,23,0.45)] backdrop-blur-2xl sm:sticky sm:top-3 sm:z-20 sm:mb-7 sm:p-4" aria-labelledby="catalog-heading">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-              <div className="flex items-center justify-between gap-3 xl:min-w-[190px]">
+              <div className="flex items-center justify-between gap-3 xl:min-w-[220px]">
                 <div>
                   <h2 id="catalog-heading" className="font-black tracking-tight text-white">Catalogo</h2>
                   <p className="text-xs text-slate-500">{filteredGames.length} {filteredGames.length === 1 ? 'risultato' : 'risultati'}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={openRandomGame}
+                  disabled={games.length === 0}
+                  className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-violet-400/20 bg-violet-500/10 px-3 text-xs font-black text-violet-100 transition hover:bg-violet-500/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 disabled:opacity-40"
+                >
+                  <Dices className="h-4 w-4" aria-hidden="true" />
+                  Casuale
+                </button>
               </div>
 
               <div className="relative flex-1">
@@ -87,7 +104,7 @@ export default function Home() {
                   type="search"
                   value={query}
                   onChange={event => setQuery(event.target.value)}
-                  placeholder="Cerca per nome, modalità o tag…"
+                  placeholder="Cerca gioco, modalità o tag…"
                   aria-label="Cerca nel catalogo dei giochi"
                   className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.045] pl-10 pr-10 text-sm font-semibold text-white outline-none transition placeholder:text-slate-600 focus:border-violet-400/45 focus:bg-white/[0.065] focus:ring-2 focus:ring-violet-500/15"
                 />
@@ -103,7 +120,7 @@ export default function Home() {
                 )}
               </div>
 
-              <div className="flex gap-2 overflow-x-auto pb-0.5" aria-label="Filtra per categoria">
+              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-0.5" aria-label="Filtra per categoria">
                 {(['Tutti', ...gameCategories] as CategoryFilter[]).map(item => (
                   <button
                     key={item}
@@ -124,13 +141,13 @@ export default function Home() {
           </section>
 
           {filteredGames.length > 0 ? (
-            <section className="grid grid-cols-1 gap-4 pb-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-label="Giochi disponibili">
+            <section className="grid grid-cols-1 gap-3 pb-12 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4" aria-label="Giochi disponibili">
               {filteredGames.map(game => (
                 <GameCard key={game.id} game={game} />
               ))}
             </section>
           ) : (
-            <section className="flex min-h-[320px] flex-col items-center justify-center rounded-[2rem] border border-dashed border-white/10 bg-white/[0.025] px-6 text-center">
+            <section className="flex min-h-[280px] flex-col items-center justify-center rounded-[2rem] border border-dashed border-white/10 bg-white/[0.025] px-6 text-center sm:min-h-[320px]">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.05]">
                 <Search className="h-6 w-6 text-slate-500" aria-hidden="true" />
               </div>
