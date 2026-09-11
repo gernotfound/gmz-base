@@ -12,6 +12,9 @@ dist/
 dist-ssr/
 *.local
 
+# Local source images: process them with `bun run process-images`.
+public/raw_img_dndpro/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

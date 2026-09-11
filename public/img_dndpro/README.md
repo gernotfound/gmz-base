@@ -1,6 +1,14 @@
-Inserisci qui le foto per il gioco "Duce o Non Duce - Pro".
+# Immagini · Duce o Non Duce Pro
 
-- Le foto che nominati `d001.jpg`, `d002.jpg`, ecc. (iniziano per "d") verranno considerate "Duce".
-- Le foto nominate `nd001.jpg`, `nd002.jpg`, ecc. (iniziano per "nd") verranno considerate "Non Duce".
+Le immagini ottimizzate del gioco vivono in questa cartella.
 
-I formati supportati sono jpg, jpeg, png, webp, gif.
+- `d001.webp`, `d002.webp`, … → Duce
+- `nd001.webp`, `nd002.webp`, … → Non Duce
+
+Per aggiungere nuove foto, inserisci gli originali in `public/raw_img_dndpro` e avvia dalla root:
+
+```bash
+bun run process-images
+```
+
+Lo script ridimensiona a 800×800, converte in WebP e aggiorna automaticamente `src/data/dnd/images.ts`, che è il manifest usato dal gioco.

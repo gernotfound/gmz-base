@@ -10,26 +10,28 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'icon-192.png', 'icon-512.png'],
+      includeAssets: ['icon.svg'],
       manifest: {
+        id: './',
         name: 'GMZ Base',
         short_name: 'GMZ Base',
-        description: 'La tua sala giochi tascabile',
-        theme_color: '#0f172a',
+        description: 'Una sala giochi web leggera, installabile e pronta a crescere.',
+        start_url: './',
+        scope: './',
+        display: 'standalone',
+        background_color: '#070b14',
+        theme_color: '#070b14',
+        categories: ['games', 'entertainment'],
         icons: [
           {
-            src: 'icon-192.png',
-            sizes: '192x192',
-            type: 'image/png'
+            src: 'icon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any maskable',
           },
-          {
-            src: 'icon-512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      }
-    })
+        ],
+      },
+    }),
   ],
   build: {
     outDir: 'dist',

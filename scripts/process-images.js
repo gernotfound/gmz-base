@@ -5,65 +5,64 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Definiamo i percorsi
 const rootDir = path.resolve(__dirname, '..');
 const rawDir = path.join(rootDir, 'public', 'raw_img_dndpro');
 const outDir = path.join(rootDir, 'public', 'img_dndpro');
-
-// Dimensioni target
+const manifestPath = path.join(rootDir, 'src', 'data', 'dnd', 'images.ts');
 const TARGET_SIZE = 800;
+const IMAGE_PATTERN = /\.(jpg|jpeg|png|webp|gif|heic)$/i;
+
+function writeManifest() {
+  const files = fs
+    .readdirSync(outDir)
+    .filter(file => IMAGE_PATTERN.test(file))
+    .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+
+  const source = `// Generato/aggiornato da scripts/process-images.js.\n// Mantieni qui solo i nomi dei file presenti in public/img_dndpro.\nexport const dndProImageFiles = ${JSON.stringify(files, null, 2)} as const;\n`;
+  fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+  fs.writeFileSync(manifestPath, source, 'utf8');
+  console.log(`Manifest aggiornato: ${files.length} immagini.`);
+}
 
 async function processImages() {
-  console.log('Inizio ottimizzazione immagini...');
-  
-  // Creiamo le cartelle se non esistono
-  if (!fs.existsSync(rawDir)) {
-    fs.mkdirSync(rawDir, { recursive: true });
-    console.log(`Cartella ${rawDir} creata. Inserisci qui le tue foto originali.`);
-  }
-  if (!fs.existsSync(outDir)) {
-    fs.mkdirSync(outDir, { recursive: true });
-  }
+  console.log('Inizio ottimizzazione immagini…');
+  fs.mkdirSync(rawDir, { recursive: true });
+  fs.mkdirSync(outDir, { recursive: true });
 
-  // Leggiamo i file nella cartella raw
-  const files = fs.readdirSync(rawDir);
-  
-  if (files.length === 0) {
-    console.log(`Nessuna immagine trovata in ${rawDir}. Aggiungi le foto (es. d001.jpg, nd001.jpg) e riavvia lo script.`);
-    return;
-  }
-
+  const files = fs.readdirSync(rawDir).filter(file => IMAGE_PATTERN.test(file));
   let processedCount = 0;
 
-  for (const file of files) {
-    // Ignoriamo i file non immagine
-    if (!file.match(/\.(jpg|jpeg|png|webp|heic)$/i)) continue;
+  if (files.length === 0) {
+    console.log(`Nessuna nuova immagine in ${rawDir}. Rigenero comunque il manifest dalle immagini già ottimizzate.`);
+  }
 
+  for (const file of files) {
     const inputPath = path.join(rawDir, file);
-    
-    // Per avere un formato uniforme, salviamo tutto in WebP che è molto compresso,
-    // o in JPEG per massima compatibilità. Scegliamo WebP.
-    const outputFileName = file.replace(/\.[^/.]+$/, "") + ".webp";
+    const outputFileName = `${path.parse(file).name}.webp`;
     const outputPath = path.join(outDir, outputFileName);
 
     try {
       await sharp(inputPath)
         .resize(TARGET_SIZE, TARGET_SIZE, {
-          fit: 'cover', // Taglia l'immagine per renderla un quadrato perfetto
-          position: 'attention' // Cerca di mantenere il volto/soggetto al centro
+          fit: 'cover',
+          position: 'attention',
         })
-        .webp({ quality: 80 }) // Compressione WebP all'80% di qualità
+        .webp({ quality: 80 })
         .toFile(outputPath);
-        
-      console.log(`✅ Processata: ${file} -> ${outputFileName}`);
-      processedCount++;
-    } catch (err) {
-      console.error(`❌ Errore processando ${file}:`, err.message);
+
+      console.log(`Processata: ${file} -> ${outputFileName}`);
+      processedCount += 1;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Errore processando ${file}: ${message}`);
     }
   }
 
-  console.log(`\nFinito! Sono state ottimizzate e ritagliate ${processedCount} immagini quadrate.`);
+  writeManifest();
+  console.log(`Finito. Immagini processate in questa esecuzione: ${processedCount}.`);
 }
 
-processImages();
+processImages().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});

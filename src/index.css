@@ -1,90 +1,187 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #070b14;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: #070b14;
+}
+
 body {
-  -webkit-tap-highlight-color: transparent;
+  margin: 0;
+  min-width: 320px;
+  min-height: 100dvh;
+  overflow-x: hidden;
   overscroll-behavior-y: none;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(99, 102, 241, 0.10), transparent 28rem),
+    #070b14;
+  color: #f8fafc;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.pt-safe { padding-top: env(safe-area-inset-top, 24px); }
-.pb-safe { padding-bottom: env(safe-area-inset-bottom, 24px); }
-.pl-safe { padding-left: env(safe-area-inset-left, 24px); }
-.pr-safe { padding-right: env(safe-area-inset-right, 24px); }
-
-/* Effetto neon */
-.neon-glow {
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+button,
+a,
+input {
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Utilities for Non Ho Mai */
-.category-checkbox:checked + i + span {
+button,
+input {
+  font: inherit;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.35);
   color: white;
 }
-.category-checkbox:checked ~ i {
-  transform: scale(1.1);
+
+.pt-safe {
+  padding-top: max(1rem, env(safe-area-inset-top));
 }
 
-/* Utilities for Dnd */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.pl-safe {
+  padding-left: max(1rem, env(safe-area-inset-left));
+}
+
+.pr-safe {
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+.animate-fadeIn {
+  animation: gmz-fade-in 280ms ease-out both;
+}
+
+@keyframes gmz-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .flipped-n {
   display: inline-block;
   transform: scaleX(-1);
 }
+
 .flipped-u {
   display: inline-block;
   transform: scaleY(-1);
 }
 
-/* Forza 4 Board overrides */
-.board {
+.connect-four-board {
+  --cell-size: min(52px, calc((100vw - 76px) / 7));
   display: grid;
-  grid-template-columns: repeat(7, 45px);
-  grid-template-rows: repeat(6, 45px);
-  gap: 8px;
-  background-color: #1e3a8a; /* Blue 900 */
-  padding: 12px;
-  border-radius: 16px;
-  box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.5), 0 10px 25px rgba(0,0,0,0.5);
-  border: 4px solid #172554;
+  grid-template-columns: repeat(7, var(--cell-size));
+  grid-template-rows: repeat(6, var(--cell-size));
+  gap: clamp(4px, 1.4vw, 8px);
+  padding: clamp(8px, 2vw, 14px);
+  border: 2px solid rgba(96, 165, 250, 0.22);
+  border-radius: 20px;
+  background: linear-gradient(145deg, #1d4ed8, #1e3a8a 55%, #172554);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -10px 28px rgba(2, 6, 23, 0.32),
+    0 24px 70px rgba(2, 6, 23, 0.50);
+  outline: none;
 }
-@media (min-width: 400px) {
-  .board {
-      grid-template-columns: repeat(7, 50px);
-      grid-template-rows: repeat(6, 50px);
-      gap: 10px;
-      padding: 16px;
-  }
+
+.connect-four-board:focus-visible {
+  box-shadow:
+    0 0 0 3px rgba(96, 165, 250, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.08),
+    0 24px 70px rgba(2, 6, 23, 0.50);
 }
-.cell {
-  width: 100%;
-  height: 100%;
-  background-color: #0f172a;
-  border-radius: 50%;
-  box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.6);
-  cursor: pointer;
+
+.connect-four-cell {
   position: relative;
   display: flex;
-  justify-content: center;
+  height: 100%;
+  width: 100%;
+  cursor: default;
   align-items: center;
+  justify-content: center;
   overflow: hidden;
+  border-radius: 9999px;
+  background: #070b14;
+  box-shadow:
+    inset 0 5px 9px rgba(0, 0, 0, 0.72),
+    0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: transform 150ms ease, background-color 150ms ease;
 }
-.token {
-  width: 90%;
-  height: 90%;
-  border-radius: 50%;
+
+.connect-four-cell-active {
+  cursor: pointer;
+}
+
+.connect-four-cell-active:hover {
+  background: #111827;
+  transform: scale(1.035);
+}
+
+.connect-four-token {
   position: absolute;
-  top: 5%;
-  transform: translateY(-300px);
-  animation: drop 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  box-shadow: inset 0 -4px 6px rgba(0,0,0,0.4), inset 0 4px 6px rgba(255,255,255,0.3), 0 4px 8px rgba(0,0,0,0.5);
+  inset: 5%;
+  border-radius: 9999px;
+  transform: translateY(-320px);
+  animation: connect-four-drop 420ms cubic-bezier(0.22, 0.8, 0.3, 1.1) forwards;
+  box-shadow:
+    inset 0 -5px 8px rgba(0, 0, 0, 0.36),
+    inset 0 5px 8px rgba(255, 255, 255, 0.30),
+    0 5px 12px rgba(0, 0, 0, 0.36);
 }
-@keyframes drop {
-  0% { transform: translateY(-300px); }
-  60% { transform: translateY(5px); }
-  80% { transform: translateY(-20px); }
-  100% { transform: translateY(0); }
+
+.connect-four-player-one {
+  background: radial-gradient(circle at 32% 28%, #fecaca, #ef4444 44%, #991b1b);
 }
-.p1 {
-  background: radial-gradient(circle at 30% 30%, #fca5a5, #ef4444, #b91c1c);
+
+.connect-four-player-two {
+  background: radial-gradient(circle at 32% 28%, #fef9c3, #facc15 44%, #a16207);
 }
-.p2 {
-  background: radial-gradient(circle at 30% 30%, #fde047, #eab308, #a16207);
+
+@keyframes connect-four-drop {
+  0% {
+    transform: translateY(-320px);
+  }
+  72% {
+    transform: translateY(4px);
+  }
+  88% {
+    transform: translateY(-7px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

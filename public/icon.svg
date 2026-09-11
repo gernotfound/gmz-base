@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GMZ Base">
+  <defs>
+    <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="1" stop-color="#070b14"/>
+    </linearGradient>
+    <linearGradient id="pad" x1="124" y1="166" x2="390" y2="358" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60a5fa"/>
+      <stop offset="0.48" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
+  <circle cx="92" cy="86" r="92" fill="#6366f1" opacity=".14"/>
+  <circle cx="430" cy="430" r="120" fill="#ec4899" opacity=".10"/>
+  <path d="M151 176c-31 0-58 20-68 50l-34 101c-13 38 29 70 62 47l66-45h158l66 45c33 23 75-9 62-47l-34-101c-10-30-37-50-68-50H151Z" fill="url(#pad)"/>
+  <path d="M151 192c-24 0-45 15-53 38L64 332c-6 18 14 34 30 23l70-48h184l70 48c16 11 36-5 30-23l-34-102c-8-23-29-38-53-38H151Z" fill="#0f172a" opacity=".58"/>
+  <rect x="136" y="241" width="86" height="26" rx="9" fill="#f8fafc"/>
+  <rect x="166" y="211" width="26" height="86" rx="9" fill="#f8fafc"/>
+  <circle cx="339" cy="238" r="18" fill="#fde047"/>
+  <circle cx="383" cy="278" r="18" fill="#fb7185"/>
+  <circle cx="339" cy="318" r="18" fill="#34d399"/>
+  <circle cx="295" cy="278" r="18" fill="#60a5fa"/>
+</svg>

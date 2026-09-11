@@ -1,10 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Home as HomeIcon, Play, Flame, Heart, Drama, Frown, Smartphone, Hand, ChevronLeft, ChevronRight, DoorOpen } from 'lucide-react';
-import { categoriesData } from '../data/non-ho-mai';
+import {
+  ChevronLeft,
+  ChevronRight,
+  DoorOpen,
+  Drama,
+  Flame,
+  Frown,
+  Hand,
+  Heart,
+  Home as HomeIcon,
+  Play,
+  RotateCcw,
+  Smartphone,
+} from 'lucide-react';
 import clsx from 'clsx';
+import { categoriesData } from '../data/non-ho-mai';
+import { shuffle } from '../lib/random';
 
 type Category = 'Hot' | 'Love' | 'Situazioni' | 'Imbarazzo' | 'Social' | 'Confini';
+type Phrase = { text: string; category: Category };
 
 const categoryConfig = {
   Hot: { icon: Flame, color: 'text-red-500', label: 'Hot' },
@@ -13,19 +28,18 @@ const categoryConfig = {
   Imbarazzo: { icon: Frown, color: 'text-violet-500', label: 'Imbarazzo' },
   Social: { icon: Smartphone, color: 'text-sky-500', label: 'Social & Guai' },
   Confini: { icon: Hand, color: 'text-emerald-500', label: 'Confini' },
-};
+} satisfies Record<Category, { icon: typeof Flame; color: string; label: string }>;
 
 export default function NonHoMai() {
   const [gameState, setGameState] = useState<'setup' | 'playing'>('setup');
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [error, setError] = useState(false);
-  
-  const [phrases, setPhrases] = useState<{text: string, category: Category}[]>([]);
+  const [phrases, setPhrases] = useState<Phrase[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const toggleCategory = (cat: Category) => {
-    setSelectedCategories(prev => 
-      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+  const toggleCategory = (category: Category) => {
+    setSelectedCategories(current =>
+      current.includes(category) ? current.filter(item => item !== category) : [...current, category],
     );
     setError(false);
   };
@@ -35,28 +49,22 @@ export default function NonHoMai() {
       setError(true);
       return;
     }
-    
-    const allPhrases = selectedCategories.flatMap(cat => 
-      categoriesData[cat].map(text => ({ text, category: cat }))
+
+    const deck = selectedCategories.flatMap(category =>
+      categoriesData[category].map(text => ({ text, category })),
     );
-    
-    // Shuffle
-    const shuffled = [...allPhrases].sort(() => 0.5 - Math.random());
-    setPhrases(shuffled);
+
+    setPhrases(shuffle(deck));
     setCurrentIndex(0);
     setGameState('playing');
   };
 
   const nextPhrase = () => {
-    if (currentIndex < phrases.length - 1) {
-      setCurrentIndex(i => i + 1);
-    }
+    setCurrentIndex(index => Math.min(index + 1, phrases.length - 1));
   };
 
   const prevPhrase = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(i => i - 1);
-    }
+    setCurrentIndex(index => Math.max(index - 1, 0));
   };
 
   const exitGame = () => {
@@ -65,88 +73,127 @@ export default function NonHoMai() {
     setCurrentIndex(0);
   };
 
+  const currentPhrase = phrases[currentIndex];
+  const isLastPhrase = phrases.length > 0 && currentIndex === phrases.length - 1;
+
   return (
-    <div className="flex flex-col items-center pt-safe pb-safe px-6 min-h-screen w-full relative bg-slate-900 text-white">
+    <div className="relative flex min-h-[100dvh] w-full flex-col items-center bg-slate-950 px-4 pb-safe pt-safe text-white sm:px-6">
       {gameState === 'setup' ? (
-        <div className="flex flex-col h-full w-full max-w-lg mx-auto pb-8 z-20">
-          <Link to="/" className="absolute top-6 left-6 w-12 h-12 rounded-2xl bg-slate-800/80 border border-slate-700/50 flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-500 hover:bg-slate-700 transition-all active:scale-90 shadow-lg z-30">
-            <HomeIcon className="w-5 h-5" />
+        <div className="z-20 mx-auto flex w-full max-w-xl flex-1 flex-col pb-8">
+          <Link
+            to="/"
+            aria-label="Torna al catalogo"
+            className="absolute left-4 top-4 z-30 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.08] bg-slate-900/80 text-slate-300 shadow-lg backdrop-blur transition hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 sm:left-6 sm:top-6"
+          >
+            <HomeIcon className="h-5 w-5" aria-hidden="true" />
           </Link>
 
-          <header className="text-center mt-20 mb-8 shrink-0">
-            <h1 className="text-5xl font-black tracking-tight mb-2 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500">
+          <header className="mb-7 mt-16 shrink-0 text-center sm:mt-20">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-300">Party game</p>
+            <h1 className="mt-2 bg-gradient-to-r from-pink-400 to-violet-400 bg-clip-text text-4xl font-black tracking-[-0.04em] text-transparent sm:text-5xl">
               NON HO MAI
             </h1>
-            <p className="text-slate-400 text-sm font-semibold">Seleziona le categorie per iniziare</p>
+            <p className="mt-2 text-sm font-semibold text-slate-400">Scegli una o più categorie e crea il tuo mazzo.</p>
           </header>
 
-          <main className="flex-grow flex flex-col items-center w-full">
-            <div className="grid grid-cols-2 gap-4 w-full mb-8">
-              {(Object.keys(categoryConfig) as Category[]).map(cat => {
-                const config = categoryConfig[cat];
+          <main className="flex flex-1 flex-col items-center">
+            <div className="mb-7 grid w-full grid-cols-2 gap-3 sm:grid-cols-3">
+              {(Object.keys(categoryConfig) as Category[]).map(category => {
+                const config = categoryConfig[category];
                 const Icon = config.icon;
-                const isSelected = selectedCategories.includes(cat);
+                const isSelected = selectedCategories.includes(category);
+
                 return (
                   <button
-                    key={cat}
-                    onClick={() => toggleCategory(cat)}
+                    key={category}
+                    type="button"
+                    onClick={() => toggleCategory(category)}
+                    aria-pressed={isSelected}
                     className={clsx(
-                      "relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 cursor-pointer transition-all active:scale-95",
-                      isSelected ? "bg-slate-800 border-pink-500/50 shadow-lg shadow-pink-500/10" : "bg-slate-800/50 border-transparent hover:bg-slate-800"
+                      'relative flex min-h-32 flex-col items-center justify-center rounded-2xl border p-4 transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400',
+                      isSelected
+                        ? 'border-pink-400/40 bg-pink-500/10 shadow-[0_15px_40px_rgba(236,72,153,0.10)]'
+                        : 'border-white/[0.07] bg-white/[0.035] hover:bg-white/[0.06]',
                     )}
                   >
-                    <Icon className={clsx("w-8 h-8 mb-3 transition-transform", isSelected ? "scale-110 text-white" : config.color)} />
-                    <span className={clsx("font-bold text-lg text-center leading-tight", isSelected ? "text-white" : "text-slate-300")}>
+                    <Icon className={clsx('mb-3 h-7 w-7 transition-transform', isSelected ? 'scale-110 text-white' : config.color)} aria-hidden="true" />
+                    <span className={clsx('text-center text-sm font-black leading-tight', isSelected ? 'text-white' : 'text-slate-300')}>
                       {config.label}
                     </span>
+                    <span className="mt-1 text-[10px] font-semibold text-slate-600">{categoriesData[category].length} frasi</span>
                   </button>
                 );
               })}
             </div>
 
             {error && (
-              <div className="text-red-400 font-bold mb-4 text-center px-4 py-2 bg-red-900/30 rounded-xl border border-red-500/20 w-full animate-pulse">
-                Seleziona almeno una categoria!
+              <div className="mb-4 w-full rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-center text-sm font-bold text-red-300" role="alert">
+                Seleziona almeno una categoria.
               </div>
             )}
 
-            <button onClick={startGame} className="w-full py-4 rounded-2xl font-black text-xl bg-gradient-to-r from-green-400 to-emerald-600 text-white shadow-lg shadow-emerald-500/20 transform active:scale-95 transition-transform mt-auto uppercase tracking-wide flex justify-center items-center gap-2">
-              GIOCA ORA <Play className="w-5 h-5 fill-white" />
+            <button
+              type="button"
+              onClick={startGame}
+              className="mt-auto flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-500 to-violet-600 px-6 py-4 text-base font-black uppercase tracking-wide text-white shadow-lg shadow-violet-500/15 transition hover:brightness-110 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300"
+            >
+              <Play className="h-5 w-5 fill-current" aria-hidden="true" />
+              Crea il mazzo
             </button>
           </main>
         </div>
       ) : (
-        <div className="absolute inset-0 flex flex-col h-full w-full bg-slate-900 z-10 animate-fadeIn">
-          <div onClick={nextPhrase} className="flex-grow flex flex-col items-center justify-center p-8 cursor-pointer relative overflow-y-auto w-full">
-            <span className="absolute top-12 md:top-8 text-sm font-bold uppercase tracking-widest text-slate-400 bg-slate-800 px-4 py-1.5 rounded-full z-10 shadow-md">
-              {phrases[currentIndex]?.category}
-            </span>
-            
-            <h2 className="text-3xl md:text-5xl font-extrabold text-center leading-tight max-w-3xl px-4 animate-fadeIn" key={currentIndex}>
-              {phrases[currentIndex]?.text}
+        <div className="absolute inset-0 z-10 flex min-h-[100dvh] w-full flex-col bg-slate-950 animate-fadeIn">
+          <button
+            type="button"
+            onClick={nextPhrase}
+            disabled={isLastPhrase}
+            className="relative flex flex-1 flex-col items-center justify-center overflow-y-auto p-7 text-white outline-none disabled:cursor-default sm:p-10"
+            aria-label={isLastPhrase ? 'Ultima frase del mazzo' : 'Mostra la frase successiva'}
+          >
+            <div className="absolute left-1/2 top-8 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap sm:top-10">
+              <span className="rounded-full border border-white/[0.07] bg-white/[0.045] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                {currentPhrase?.category}
+              </span>
+              <span className="text-[10px] font-bold text-slate-600">
+                {currentIndex + 1}/{phrases.length}
+              </span>
+            </div>
+
+            <h2 key={currentIndex} aria-live="polite" className="max-w-4xl px-2 text-center text-3xl font-black leading-tight tracking-[-0.025em] animate-fadeIn sm:text-5xl">
+              {currentPhrase?.text}
             </h2>
-            
-            <p className="absolute bottom-8 text-slate-500 text-xs font-semibold flex items-center gap-2 pointer-events-none">
-              TOCCO PER AVANTI
+
+            <p className="absolute bottom-6 text-[10px] font-black uppercase tracking-[0.16em] text-slate-600 sm:bottom-8">
+              {isLastPhrase ? 'Fine del mazzo' : 'Tocca per andare avanti'}
             </p>
-          </div>
+          </button>
 
-          <div className="h-20 bg-slate-800 flex items-center justify-between px-6 rounded-t-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.5)] z-20 pb-safe border-t border-slate-700/30 w-full">
-            <button onClick={prevPhrase} disabled={currentIndex === 0} className="flex flex-col items-center justify-center p-2 text-slate-400 hover:text-white active:scale-90 transition-all w-16 disabled:opacity-30">
-              <ChevronLeft className="w-6 h-6 mb-1" />
-              <span className="text-[9px] uppercase font-bold tracking-wider">Indietro</span>
+          <nav className="flex min-h-20 w-full items-center justify-between border-t border-white/[0.06] bg-slate-900/95 px-4 pb-safe shadow-[0_-10px_35px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:px-6" aria-label="Controlli partita">
+            <button
+              type="button"
+              onClick={prevPhrase}
+              disabled={currentIndex === 0}
+              className="flex w-20 flex-col items-center justify-center p-2 text-slate-400 transition hover:text-white disabled:opacity-25"
+            >
+              <ChevronLeft className="mb-1 h-6 w-6" aria-hidden="true" />
+              <span className="text-[9px] font-black uppercase tracking-wider">Indietro</span>
             </button>
 
-            <button onClick={exitGame} className="flex flex-col items-center justify-center p-2 text-red-400 hover:text-red-300 active:scale-90 transition-all w-16">
-              <DoorOpen className="w-6 h-6 mb-1" />
-              <span className="text-[9px] uppercase font-bold tracking-wider">Esci</span>
+            <button type="button" onClick={exitGame} className="flex w-20 flex-col items-center justify-center p-2 text-red-400 transition hover:text-red-300">
+              <DoorOpen className="mb-1 h-6 w-6" aria-hidden="true" />
+              <span className="text-[9px] font-black uppercase tracking-wider">Esci</span>
             </button>
 
-            <button onClick={nextPhrase} disabled={currentIndex === phrases.length - 1} className="flex flex-col items-center justify-center p-2 text-emerald-400 hover:text-emerald-300 active:scale-90 transition-all w-16 disabled:opacity-30">
-              <ChevronRight className="w-6 h-6 mb-1" />
-              <span className="text-[9px] uppercase font-bold tracking-wider">Avanti</span>
+            <button
+              type="button"
+              onClick={isLastPhrase ? startGame : nextPhrase}
+              className="flex w-20 flex-col items-center justify-center p-2 text-emerald-400 transition hover:text-emerald-300"
+            >
+              {isLastPhrase ? <RotateCcw className="mb-1 h-6 w-6" aria-hidden="true" /> : <ChevronRight className="mb-1 h-6 w-6" aria-hidden="true" />}
+              <span className="text-[9px] font-black uppercase tracking-wider">{isLastPhrase ? 'Rimescola' : 'Avanti'}</span>
             </button>
-          </div>
+          </nav>
         </div>
       )}
     </div>
