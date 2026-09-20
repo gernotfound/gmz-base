@@ -1,9 +1,9 @@
 import { shuffle } from './random';
 
 /**
- * Builds a quiz with the same number of positive/negative answers and avoids
- * streaks longer than two identical answers. This removes answer-frequency
- * bias while keeping the order unpredictable.
+ * Builds a quiz with the same number of positive/negative answers.
+ * The final order is fully shuffled and does not constrain streak length,
+ * so players cannot infer the next answer from an enforced sequence pattern.
  */
 export function buildBalancedQuiz<T>(
   items: readonly T[],
@@ -18,40 +18,8 @@ export function buildBalancedQuiz<T>(
     return shuffle(items).slice(0, Math.min(items.length, maxPerGroup * 2));
   }
 
-  const positivePool = positives.slice(0, groupSize);
-  const negativePool = negatives.slice(0, groupSize);
-  const result: T[] = [];
-  let lastWasPositive: boolean | null = null;
-  let streak = 0;
-
-  while (positivePool.length > 0 || negativePool.length > 0) {
-    const forceOpposite = streak >= 2 && lastWasPositive !== null;
-    const positiveAvailable = positivePool.length > 0;
-    const negativeAvailable = negativePool.length > 0;
-
-    let pickPositive: boolean;
-    if (!positiveAvailable) {
-      pickPositive = false;
-    } else if (!negativeAvailable) {
-      pickPositive = true;
-    } else if (forceOpposite) {
-      pickPositive = !lastWasPositive;
-    } else {
-      const remaining = positivePool.length + negativePool.length;
-      pickPositive = Math.random() < positivePool.length / remaining;
-    }
-
-    const selected = pickPositive ? positivePool.pop() : negativePool.pop();
-    if (!selected) continue;
-
-    result.push(selected);
-    if (lastWasPositive === pickPositive) {
-      streak += 1;
-    } else {
-      lastWasPositive = pickPositive;
-      streak = 1;
-    }
-  }
-
-  return result;
+  return shuffle([
+    ...positives.slice(0, groupSize),
+    ...negatives.slice(0, groupSize),
+  ]);
 }
