@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
-  base: '/gmz-base/',
+export default defineConfig(({ mode }) => ({
+  base: mode === 'github-pages' ? '/gmz-base/' : '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -37,4 +37,4 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
   },
-});
+}));
