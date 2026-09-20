@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { HashRouter, Route, Routes } from 'react-router-dom';
+import RouteMetadata from './components/RouteMetadata';
 import { games } from './games/catalog';
 import Home from './pages/Home';
 import NotFound from './pages/NotFound';
@@ -24,6 +25,7 @@ function PageLoader() {
 function App() {
   return (
     <HashRouter>
+      <RouteMetadata />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Home />} />
