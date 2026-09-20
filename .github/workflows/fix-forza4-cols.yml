@@ -1,0 +1,38 @@
+name: Fix Forza 4 column import
+
+on:
+  push:
+    branches:
+      - refactor/forza4-protocol
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/forza4-protocol
+
+      - name: Restore required column constant import
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'src/pages/Forza4.tsx';
+          let source = fs.readFileSync(path, 'utf8');
+          const marker = "import {\n  createEmptyBoard,";
+          if (!source.includes(marker)) throw new Error('Expected gameLogic import block not found');
+          source = source.replace(marker, "import {\n  FORZA4_COLS as COLS,\n  createEmptyBoard,");
+          fs.writeFileSync(path, source);
+          NODE
+          rm .github/workflows/fix-forza4-cols.yml
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Forza4.tsx .github/workflows/fix-forza4-cols.yml
+          git commit -m "fix: restore Forza 4 column constant import"
+          git push origin HEAD:refactor/forza4-protocol
