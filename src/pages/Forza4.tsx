@@ -7,7 +7,6 @@ import clsx from 'clsx';
 import GameHomeButton from '../components/GameHomeButton';
 import {
   FORZA4_COLS as COLS,
-  FORZA4_ROWS as ROWS,
   createEmptyBoard,
   dropToken,
   findWinningCells,
