@@ -5,9 +5,18 @@ import { QRCodeSVG } from 'qrcode.react';
 import Peer, { type DataConnection } from 'peerjs';
 import clsx from 'clsx';
 import GameHomeButton from '../components/GameHomeButton';
+import {
+  FORZA4_COLS as COLS,
+  createEmptyBoard,
+  dropToken,
+  findWinningCells,
+  isBoardFull,
+  isCellPosition,
+  isValidBoard,
+  type CellPosition,
+  type Forza4Player,
+} from '../games/forza4/gameLogic';
 
-const ROWS = 6;
-const COLS = 7;
 const CONNECTION_TIMEOUT_MS = 8_000;
 const RECONNECT_GRACE_MS = 12_000;
 const RECONNECT_RETRY_MS = 1_400;
@@ -16,8 +25,7 @@ type GameState = 'setup' | 'playing' | 'end';
 type GameMode = 'online' | 'local';
 type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'lost';
 type PlayerNumber = 0 | 1 | 2;
-type ActivePlayer = 1 | 2;
-type CellPosition = { row: number; col: number };
+type ActivePlayer = Forza4Player;
 type FallingToken = CellPosition & { player: ActivePlayer; id: number };
 type SessionScore = { red: number; yellow: number; draws: number };
 type SyncPayload = {
@@ -37,10 +45,6 @@ type PeerMessage =
   | { type: 'restart-decline' }
   | { type: 'sync'; payload: SyncPayload };
 
-function createEmptyBoard() {
-  return Array.from({ length: ROWS }, () => Array<number>(COLS).fill(0));
-}
-
 function createHostCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(6, 'X');
 }
@@ -55,18 +59,6 @@ function isValidCode(value: string) {
 
 function getDropDuration(row: number) {
   return 300 + row * 48;
-}
-
-function isValidBoard(value: unknown): value is number[][] {
-  return Array.isArray(value) && value.length === ROWS && value.every(row =>
-    Array.isArray(row) && row.length === COLS && row.every(cell => cell === 0 || cell === 1 || cell === 2),
-  );
-}
-
-function isCellPosition(value: unknown): value is CellPosition {
-  if (!value || typeof value !== 'object') return false;
-  const cell = value as { row?: unknown; col?: unknown };
-  return Number.isInteger(cell.row) && Number.isInteger(cell.col) && Number(cell.row) >= 0 && Number(cell.row) < ROWS && Number(cell.col) >= 0 && Number(cell.col) < COLS;
 }
 
 function isSyncPayload(value: unknown): value is SyncPayload {
@@ -93,25 +85,6 @@ function isPeerMessage(data: unknown): data is PeerMessage {
   if (message.type === 'restart-request' || message.type === 'restart-accept' || message.type === 'restart-decline') return true;
   if (message.type === 'sync') return isSyncPayload(message.payload);
   return message.type === 'move' && Number.isInteger(message.col) && Number(message.col) >= 0 && Number(message.col) < COLS && (message.playerNum === 1 || message.playerNum === 2);
-}
-
-function findWinningCells(board: number[][], row: number, col: number, player: number): CellPosition[] {
-  const directions = [[0, 1], [1, 0], [1, 1], [1, -1]] as const;
-  for (const [rowDelta, colDelta] of directions) {
-    const cells: CellPosition[] = [{ row, col }];
-    for (const direction of [-1, 1] as const) {
-      let step = 1;
-      while (true) {
-        const nextRow = row + rowDelta * step * direction;
-        const nextCol = col + colDelta * step * direction;
-        if (nextRow < 0 || nextRow >= ROWS || nextCol < 0 || nextCol >= COLS || board[nextRow][nextCol] !== player) break;
-        cells.push({ row: nextRow, col: nextCol });
-        step += 1;
-      }
-    }
-    if (cells.length >= 4) return cells;
-  }
-  return [];
 }
 
 export default function Forza4() {
@@ -214,8 +187,6 @@ export default function Forza4() {
     setFallingToken(null);
   };
 
-  const evaluateDrawCondition = (currentBoard: number[][]) => currentBoard[0].every(cell => cell !== 0);
-
   const animateDrop = (row: number, col: number, player: ActivePlayer) => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       clearDropAnimation();
@@ -243,16 +214,9 @@ export default function Forza4() {
   const processMove = (col: number, playerNum: ActivePlayer) => {
     if (gameOverRef.current || playerNum !== currentPlayerRef.current || col < 0 || col >= COLS || boardRef.current[0][col] !== 0) return false;
 
-    const nextBoard = boardRef.current.map(row => [...row]);
-    let placedRow = -1;
-    for (let row = ROWS - 1; row >= 0; row -= 1) {
-      if (nextBoard[row][col] === 0) {
-        nextBoard[row][col] = playerNum;
-        placedRow = row;
-        break;
-      }
-    }
-    if (placedRow === -1) return false;
+    const dropped = dropToken(boardRef.current, col, playerNum);
+    if (!dropped) return false;
+    const { board: nextBoard, row: placedRow } = dropped;
 
     boardRef.current = nextBoard;
     setBoard(nextBoard);
@@ -267,7 +231,7 @@ export default function Forza4() {
       setWinningCells(winCells);
       registerResult(playerNum);
       updateGameState('end');
-    } else if (evaluateDrawCondition(nextBoard)) {
+    } else if (isBoardFull(nextBoard)) {
       gameOverRef.current = true;
       winnerRef.current = 0;
       winningCellsRef.current = [];
