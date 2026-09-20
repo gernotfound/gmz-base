@@ -11,11 +11,18 @@ import {
   dropToken,
   findWinningCells,
   isBoardFull,
-  isCellPosition,
-  isValidBoard,
   type CellPosition,
   type Forza4Player,
 } from '../games/forza4/gameLogic';
+import {
+  createHostCode,
+  isPeerMessage,
+  isValidCode,
+  normalizeCode,
+  type PeerMessage,
+  type SessionScore,
+  type SyncPayload,
+} from '../games/forza4/protocol';
 
 const CONNECTION_TIMEOUT_MS = 8_000;
 const RECONNECT_GRACE_MS = 12_000;
@@ -27,64 +34,8 @@ type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'l
 type PlayerNumber = 0 | 1 | 2;
 type ActivePlayer = Forza4Player;
 type FallingToken = CellPosition & { player: ActivePlayer; id: number };
-type SessionScore = { red: number; yellow: number; draws: number };
-type SyncPayload = {
-  board: number[][];
-  currentPlayer: ActivePlayer;
-  starter: ActivePlayer;
-  score: SessionScore;
-  roundNumber: number;
-  gameState: 'playing' | 'end';
-  winner: number | null;
-  winningCells: CellPosition[];
-};
-type PeerMessage =
-  | { type: 'move'; col: number; playerNum: ActivePlayer }
-  | { type: 'restart-request' }
-  | { type: 'restart-accept' }
-  | { type: 'restart-decline' }
-  | { type: 'sync'; payload: SyncPayload };
-
-function createHostCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(6, 'X');
-}
-
-function normalizeCode(value: string) {
-  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-}
-
-function isValidCode(value: string) {
-  return /^[A-Z0-9]{4,6}$/.test(value);
-}
-
 function getDropDuration(row: number) {
   return 300 + row * 48;
-}
-
-function isSyncPayload(value: unknown): value is SyncPayload {
-  if (!value || typeof value !== 'object') return false;
-  const payload = value as Partial<SyncPayload>;
-  const score = payload.score as Partial<SessionScore> | undefined;
-  return (
-    isValidBoard(payload.board) &&
-    (payload.currentPlayer === 1 || payload.currentPlayer === 2) &&
-    (payload.starter === 1 || payload.starter === 2) &&
-    typeof score?.red === 'number' && score.red >= 0 &&
-    typeof score?.yellow === 'number' && score.yellow >= 0 &&
-    typeof score?.draws === 'number' && score.draws >= 0 &&
-    typeof payload.roundNumber === 'number' && Number.isInteger(payload.roundNumber) && payload.roundNumber >= 1 &&
-    (payload.gameState === 'playing' || payload.gameState === 'end') &&
-    (payload.winner === null || payload.winner === 0 || payload.winner === 1 || payload.winner === 2) &&
-    Array.isArray(payload.winningCells) && payload.winningCells.every(isCellPosition)
-  );
-}
-
-function isPeerMessage(data: unknown): data is PeerMessage {
-  if (!data || typeof data !== 'object') return false;
-  const message = data as { type?: unknown; col?: unknown; playerNum?: unknown; payload?: unknown };
-  if (message.type === 'restart-request' || message.type === 'restart-accept' || message.type === 'restart-decline') return true;
-  if (message.type === 'sync') return isSyncPayload(message.payload);
-  return message.type === 'move' && Number.isInteger(message.col) && Number(message.col) >= 0 && Number(message.col) < COLS && (message.playerNum === 1 || message.playerNum === 2);
 }
 
 export default function Forza4() {
