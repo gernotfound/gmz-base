@@ -140,6 +140,10 @@ export class Forza4PeerSession {
     return true;
   }
 
+  isConnected() {
+    return this.connectionState === 'connected' && Boolean(this.connection?.open);
+  }
+
   sendMove(col: number, player: Forza4Player) {
     if (!this.connection?.open || this.connectionState !== 'connected') return false;
     this.connection.send({ type: 'move', col, playerNum: player } satisfies PeerMessage);
