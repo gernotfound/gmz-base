@@ -37,7 +37,7 @@ export function isCellPosition(value: unknown): value is CellPosition {
 }
 
 export function dropToken(
-  board: readonly (readonly Forza4Cell[])[],
+  board: readonly (readonly number[])[],
   col: number,
   player: Forza4Player,
 ): DropResult | null {
@@ -57,7 +57,7 @@ export function dropToken(
 }
 
 export function findWinningCells(
-  board: readonly (readonly Forza4Cell[])[],
+  board: readonly (readonly number[])[],
   row: number,
   col: number,
   player: Forza4Player,
@@ -92,6 +92,6 @@ export function findWinningCells(
   return [];
 }
 
-export function isBoardFull(board: readonly (readonly Forza4Cell[])[]): boolean {
+export function isBoardFull(board: readonly (readonly number[])[]): boolean {
   return board[0]?.every(cell => cell !== 0) ?? false;
 }
