@@ -6,6 +6,7 @@ import Peer, { type DataConnection } from 'peerjs';
 import clsx from 'clsx';
 import GameHomeButton from '../components/GameHomeButton';
 import {
+  FORZA4_COLS as COLS,
   createEmptyBoard,
   dropToken,
   findWinningCells,
