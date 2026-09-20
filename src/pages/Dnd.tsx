@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import GameHomeButton from '../components/GameHomeButton';
 import { databaseFrasi, type DndDifficulty, type DndQuestion } from '../data/dnd/questions';
 import { additionalDndQuestions } from '../data/dnd/additionalQuestions';
-import { buildBalancedQuiz } from '../lib/quiz';
+import { avoidImmediateRepeat, buildBalancedQuiz } from '../lib/quiz';
 
 type GameState = 'setup' | 'playing' | 'end';
 type DifficultyFilter = 'misto' | DndDifficulty;
@@ -84,7 +84,12 @@ export default function Dnd() {
     }
 
     if (mode === 'infinita') {
-      setQuestions(createQuestionSet('infinita', difficulty));
+      const nextQuestions = avoidImmediateRepeat(
+        createQuestionSet('infinita', difficulty),
+        currentQuestion,
+        (left, right) => left.text === right.text,
+      );
+      setQuestions(nextQuestions);
       setCurrentQuestionIndex(0);
       setAnswered(false);
       setLastAnswerCorrect(null);

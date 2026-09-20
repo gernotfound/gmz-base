@@ -3,7 +3,7 @@ import { ChevronRight, ExternalLink, Flag, Infinity as InfinityIcon, Play, Rotat
 import { Link } from 'react-router-dom';
 import GameHomeButton from '../components/GameHomeButton';
 import { dndPhotoQuestions, type DndPhotoQuestion, type PhotoDifficulty } from '../data/dnd/photoQuestions';
-import { buildBalancedQuiz } from '../lib/quiz';
+import { avoidImmediateRepeat, buildBalancedQuiz } from '../lib/quiz';
 
 type GameState = 'setup' | 'playing' | 'end';
 type DifficultyFilter = 'misto' | PhotoDifficulty;
@@ -91,7 +91,12 @@ export default function DndPro() {
     }
 
     if (mode === 'infinita') {
-      setQuestions(createQuestionSet('infinita', difficulty));
+      const nextQuestions = avoidImmediateRepeat(
+        createQuestionSet('infinita', difficulty),
+        currentQuestion,
+        (left, right) => left.id === right.id,
+      );
+      setQuestions(nextQuestions);
       setCurrentQuestionIndex(0);
       setAnswered(false);
       setLastAnswerCorrect(null);
