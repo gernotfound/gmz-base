@@ -23,3 +23,22 @@ export function buildBalancedQuiz<T>(
     ...negatives.slice(0, groupSize),
   ]);
 }
+
+/**
+ * Keeps a freshly generated deck random while preventing its first item from
+ * immediately repeating the item that just ended the previous deck.
+ */
+export function avoidImmediateRepeat<T>(
+  items: readonly T[],
+  previousItem: T | undefined,
+  isSame: (left: T, right: T) => boolean,
+): T[] {
+  const next = [...items];
+  if (!previousItem || next.length < 2 || !isSame(next[0], previousItem)) return next;
+
+  const replacementIndex = next.findIndex((item, index) => index > 0 && !isSame(item, previousItem));
+  if (replacementIndex === -1) return next;
+
+  [next[0], next[replacementIndex]] = [next[replacementIndex], next[0]];
+  return next;
+}
