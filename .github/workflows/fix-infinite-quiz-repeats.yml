@@ -1,0 +1,70 @@
+name: Integrate infinite quiz repeat guard
+
+on:
+  push:
+    branches:
+      - fix/quiz-infinite-repeats
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/quiz-infinite-repeats
+
+      - name: Integrate repeat guard
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function edit(path, changes) {
+            let source = fs.readFileSync(path, 'utf8');
+            for (const [label, before, after] of changes) {
+              if (!source.includes(before)) throw new Error(`${path}: ${label} block not found`);
+              source = source.replace(before, after);
+            }
+            fs.writeFileSync(path, source);
+          }
+
+          edit('src/pages/Dnd.tsx', [
+            [
+              'quiz import',
+              "import { buildBalancedQuiz } from '../lib/quiz';",
+              "import { avoidImmediateRepeat, buildBalancedQuiz } from '../lib/quiz';",
+            ],
+            [
+              'infinite deck refresh',
+              "    if (mode === 'infinita') {\n      setQuestions(createQuestionSet('infinita', difficulty));\n      setCurrentQuestionIndex(0);\n      setAnswered(false);\n      setLastAnswerCorrect(null);\n      return;\n    }",
+              "    if (mode === 'infinita') {\n      const nextQuestions = avoidImmediateRepeat(\n        createQuestionSet('infinita', difficulty),\n        currentQuestion,\n        (left, right) => left.text === right.text,\n      );\n      setQuestions(nextQuestions);\n      setCurrentQuestionIndex(0);\n      setAnswered(false);\n      setLastAnswerCorrect(null);\n      return;\n    }",
+            ],
+          ]);
+
+          edit('src/pages/DndPro.tsx', [
+            [
+              'quiz import',
+              "import { buildBalancedQuiz } from '../lib/quiz';",
+              "import { avoidImmediateRepeat, buildBalancedQuiz } from '../lib/quiz';",
+            ],
+            [
+              'infinite deck refresh',
+              "    if (mode === 'infinita') {\n      setQuestions(createQuestionSet('infinita', difficulty));\n      setCurrentQuestionIndex(0);\n      setAnswered(false);\n      setLastAnswerCorrect(null);\n      return;\n    }",
+              "    if (mode === 'infinita') {\n      const nextQuestions = avoidImmediateRepeat(\n        createQuestionSet('infinita', difficulty),\n        currentQuestion,\n        (left, right) => left.id === right.id,\n      );\n      setQuestions(nextQuestions);\n      setCurrentQuestionIndex(0);\n      setAnswered(false);\n      setLastAnswerCorrect(null);\n      return;\n    }",
+            ],
+          ]);
+          NODE
+
+      - name: Remove temporary workflow and commit
+        run: |
+          rm .github/workflows/fix-infinite-quiz-repeats.yml
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Dnd.tsx src/pages/DndPro.tsx .github/workflows/fix-infinite-quiz-repeats.yml
+          git commit -m "fix: avoid infinite quiz boundary repeats"
+          git push origin HEAD:fix/quiz-infinite-repeats
