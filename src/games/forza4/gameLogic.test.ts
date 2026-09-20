@@ -21,6 +21,12 @@ describe('Forza 4 game logic', () => {
     expect(isValidBoard(board)).toBe(true);
   });
 
+  it('rejects malformed board data', () => {
+    expect(isValidBoard(null)).toBe(false);
+    expect(isValidBoard([[0, 1, 2]])).toBe(false);
+    expect(isValidBoard(createEmptyBoard().map((row, index) => index === 0 ? [...row.slice(0, -1), 9] : row))).toBe(false);
+  });
+
   it('drops tokens from the bottom without mutating the source board', () => {
     const board = createEmptyBoard();
     const first = dropToken(board, 3, 1);
