@@ -1,0 +1,100 @@
+name: Refactor Forza 4 integration
+
+on:
+  push:
+    branches:
+      - refactor/forza4-game-logic
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/forza4-game-logic
+
+      - name: Integrate tested game logic
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'src/pages/Forza4.tsx';
+          let source = fs.readFileSync(path, 'utf8');
+
+          function replaceExact(label, before, after) {
+            if (!source.includes(before)) {
+              throw new Error(`Codemod failed: ${label} block was not found`);
+            }
+            source = source.replace(before, after);
+          }
+
+          replaceExact(
+            'game imports',
+            "import GameHomeButton from '../components/GameHomeButton';\n\nconst ROWS = 6;\nconst COLS = 7;\n",
+            "import GameHomeButton from '../components/GameHomeButton';\nimport {\n  FORZA4_COLS as COLS,\n  FORZA4_ROWS as ROWS,\n  createEmptyBoard,\n  dropToken,\n  findWinningCells,\n  isBoardFull,\n  isCellPosition,\n  isValidBoard,\n  type CellPosition,\n  type Forza4Player,\n} from '../games/forza4/gameLogic';\n\n",
+          );
+
+          replaceExact(
+            'player and cell types',
+            "type ActivePlayer = 1 | 2;\ntype CellPosition = { row: number; col: number };\n",
+            "type ActivePlayer = Forza4Player;\n",
+          );
+
+          replaceExact(
+            'empty board helper',
+            "function createEmptyBoard() {\n  return Array.from({ length: ROWS }, () => Array<number>(COLS).fill(0));\n}\n\n",
+            '',
+          );
+
+          replaceExact(
+            'board validators',
+            "function isValidBoard(value: unknown): value is number[][] {\n  return Array.isArray(value) && value.length === ROWS && value.every(row =>\n    Array.isArray(row) && row.length === COLS && row.every(cell => cell === 0 || cell === 1 || cell === 2),\n  );\n}\n\nfunction isCellPosition(value: unknown): value is CellPosition {\n  if (!value || typeof value !== 'object') return false;\n  const cell = value as { row?: unknown; col?: unknown };\n  return Number.isInteger(cell.row) && Number.isInteger(cell.col) && Number(cell.row) >= 0 && Number(cell.row) < ROWS && Number(cell.col) >= 0 && Number(cell.col) < COLS;\n}\n\n",
+            '',
+          );
+
+          replaceExact(
+            'winning cells helper',
+            "function findWinningCells(board: number[][], row: number, col: number, player: number): CellPosition[] {\n  const directions = [[0, 1], [1, 0], [1, 1], [1, -1]] as const;\n  for (const [rowDelta, colDelta] of directions) {\n    const cells: CellPosition[] = [{ row, col }];\n    for (const direction of [-1, 1] as const) {\n      let step = 1;\n      while (true) {\n        const nextRow = row + rowDelta * step * direction;\n        const nextCol = col + colDelta * step * direction;\n        if (nextRow < 0 || nextRow >= ROWS || nextCol < 0 || nextCol >= COLS || board[nextRow][nextCol] !== player) break;\n        cells.push({ row: nextRow, col: nextCol });\n        step += 1;\n      }\n    }\n    if (cells.length >= 4) return cells;\n  }\n  return [];\n}\n\n",
+            '',
+          );
+
+          replaceExact(
+            'draw helper',
+            "  const evaluateDrawCondition = (currentBoard: number[][]) => currentBoard[0].every(cell => cell !== 0);\n\n",
+            '',
+          );
+
+          replaceExact(
+            'token placement',
+            "    const nextBoard = boardRef.current.map(row => [...row]);\n    let placedRow = -1;\n    for (let row = ROWS - 1; row >= 0; row -= 1) {\n      if (nextBoard[row][col] === 0) {\n        nextBoard[row][col] = playerNum;\n        placedRow = row;\n        break;\n      }\n    }\n    if (placedRow === -1) return false;\n\n",
+            "    const dropped = dropToken(boardRef.current, col, playerNum);\n    if (!dropped) return false;\n    const { board: nextBoard, row: placedRow } = dropped;\n\n",
+          );
+
+          replaceExact(
+            'draw evaluation',
+            '    } else if (evaluateDrawCondition(nextBoard)) {',
+            '    } else if (isBoardFull(nextBoard)) {',
+          );
+
+          if (source.includes('function findWinningCells(') || source.includes('const evaluateDrawCondition')) {
+            throw new Error('Codemod failed: duplicate game logic remains in Forza4.tsx');
+          }
+
+          fs.writeFileSync(path, source);
+          NODE
+
+      - name: Remove temporary codemod workflow
+        run: rm .github/workflows/refactor-forza4-codemod.yml
+
+      - name: Commit integration
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Forza4.tsx .github/workflows/refactor-forza4-codemod.yml
+          git commit -m "refactor: use tested Forza 4 game logic"
+          git push origin HEAD:refactor/forza4-game-logic
