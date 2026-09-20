@@ -85,6 +85,12 @@ describe('avoidImmediateRepeat', () => {
     expect(avoidImmediateRepeat(items, previous, isSame)).toEqual(items);
   });
 
+  it('leaves the deck unchanged when there is no previous item', () => {
+    const items = [{ id: 'first', positive: true }, { id: 'second', positive: false }];
+
+    expect(avoidImmediateRepeat(items, undefined, isSame)).toEqual(items);
+  });
+
   it('keeps the deck usable when every item is the same', () => {
     const previous = { id: 'same', positive: true };
     const items = [previous, { ...previous }];
