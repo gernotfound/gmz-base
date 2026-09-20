@@ -49,6 +49,7 @@ describe('Forza 4 network protocol', () => {
     expect(isSyncPayload({ ...makeSyncPayload(), currentPlayer: 3 })).toBe(false);
     expect(isSyncPayload({ ...makeSyncPayload(), score: { red: -1, yellow: 0, draws: 0 } })).toBe(false);
     expect(isSyncPayload({ ...makeSyncPayload(), score: { red: 0.5, yellow: 0, draws: 0 } })).toBe(false);
+    expect(isSyncPayload({ ...makeSyncPayload(), score: { red: Infinity, yellow: 0, draws: 0 } })).toBe(false);
     expect(isSyncPayload({ ...makeSyncPayload(), roundNumber: 0 })).toBe(false);
     expect(isSyncPayload({ ...makeSyncPayload(), winner: 9 })).toBe(false);
     expect(isSyncPayload({ ...makeSyncPayload(), winningCells: [{ row: 99, col: 0 }] })).toBe(false);
@@ -66,6 +67,7 @@ describe('Forza 4 network protocol', () => {
   it('rejects unsupported or malformed peer messages', () => {
     expect(isPeerMessage(null)).toBe(false);
     expect(isPeerMessage({ type: 'move', col: -1, playerNum: 1 })).toBe(false);
+    expect(isPeerMessage({ type: 'move', col: 1.5, playerNum: 1 })).toBe(false);
     expect(isPeerMessage({ type: 'move', col: 7, playerNum: 1 })).toBe(false);
     expect(isPeerMessage({ type: 'move', col: 0, playerNum: 3 })).toBe(false);
     expect(isPeerMessage({ type: 'sync', payload: {} })).toBe(false);
