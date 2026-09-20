@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildBalancedQuiz } from './quiz';
+import { avoidImmediateRepeat, buildBalancedQuiz } from './quiz';
 
 type QuizItem = {
   id: string;
@@ -61,5 +61,34 @@ describe('buildBalancedQuiz', () => {
     expect(result.slice(0, 3).every(isPositive)).toBe(true);
     expect(result.filter(isPositive)).toHaveLength(3);
     expect(result.filter(item => !isPositive(item))).toHaveLength(3);
+  });
+});
+
+describe('avoidImmediateRepeat', () => {
+  const isSame = (left: QuizItem, right: QuizItem) => left.id === right.id;
+
+  it('moves an immediate repeat away from the start of a new deck', () => {
+    const previous = { id: 'repeat', positive: true };
+    const items = [previous, { id: 'next', positive: false }, { id: 'other', positive: true }];
+
+    const result = avoidImmediateRepeat(items, previous, isSame);
+
+    expect(result[0].id).toBe('next');
+    expect(result.map(item => item.id).sort()).toEqual(items.map(item => item.id).sort());
+    expect(items[0].id).toBe('repeat');
+  });
+
+  it('leaves an already-safe deck order unchanged', () => {
+    const previous = { id: 'previous', positive: true };
+    const items = [{ id: 'next', positive: false }, { id: 'other', positive: true }];
+
+    expect(avoidImmediateRepeat(items, previous, isSame)).toEqual(items);
+  });
+
+  it('keeps the deck usable when every item is the same', () => {
+    const previous = { id: 'same', positive: true };
+    const items = [previous, { ...previous }];
+
+    expect(avoidImmediateRepeat(items, previous, isSame)).toEqual(items);
   });
 });
