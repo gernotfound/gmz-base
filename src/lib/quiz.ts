@@ -38,7 +38,7 @@ export function buildWeightedQuiz<T>(
   if (targetSize === 0) return [];
 
   const positives = shuffle(items.filter(isPositive));
-  const negatives = shuffle(items.filter(item => !isPositive(item));
+  const negatives = shuffle(items.filter(item => !isPositive(item)));
   const normalizedShare = Math.min(1, Math.max(0, positiveShare));
   const desiredPositiveCount = Math.min(positives.length, Math.round(targetSize * normalizedShare));
   const desiredNegativeCount = Math.min(negatives.length, targetSize - desiredPositiveCount);
