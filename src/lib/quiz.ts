@@ -25,40 +25,36 @@ export function buildBalancedQuiz<T>(
 }
 
 /**
- * Builds a quiz up to a requested total size while keeping the answer split as
- * even as the available pool permits. Unlike buildBalancedQuiz, it never drops
- * otherwise valid items merely because one answer group is smaller.
+ * Builds a unique random quiz with a target share of positive answers.
+ * Selection and final order are both randomized; no periodic answer pattern is enforced.
  */
-export function buildBestEffortBalancedQuiz<T>(
+export function buildWeightedQuiz<T>(
   items: readonly T[],
   isPositive: (item: T) => boolean,
   maxItems: number,
+  positiveShare = 0.2,
 ): T[] {
   const targetSize = Math.max(0, Math.min(items.length, Math.floor(maxItems)));
   if (targetSize === 0) return [];
 
   const positives = shuffle(items.filter(isPositive));
   const negatives = shuffle(items.filter(item => !isPositive(item));
-  const selected: T[] = [];
-  let positiveIndex = 0;
-  let negativeIndex = 0;
+  const normalizedShare = Math.min(1, Math.max(0, positiveShare));
+  const desiredPositiveCount = Math.min(positives.length, Math.round(targetSize * normalizedShare));
+  const desiredNegativeCount = Math.min(negatives.length, targetSize - desiredPositiveCount);
 
-  while (
-    selected.length + 2 <= targetSize &&
-    positiveIndex < positives.length &&
-    negativeIndex < negatives.length
-  ) {
-    selected.push(positives[positiveIndex], negatives[negativeIndex]);
-    positiveIndex += 1;
-    negativeIndex += 1;
-  }
+  const selected = [
+    ...positives.slice(0, desiredPositiveCount),
+    ...negatives.slice(0, desiredNegativeCount),
+  ];
 
   if (selected.length < targetSize) {
-    const leftovers = shuffle([
-      ...positives.slice(positiveIndex),
-      ...negatives.slice(negativeIndex),
-    ]);
-    selected.push(...leftovers.slice(0, targetSize - selected.length));
+    selected.push(
+      ...shuffle([
+        ...positives.slice(desiredPositiveCount),
+        ...negatives.slice(desiredNegativeCount),
+      ]).slice(0, targetSize - selected.length),
+    );
   }
 
   return shuffle(selected);
