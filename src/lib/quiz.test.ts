@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { avoidImmediateRepeat, buildBalancedQuiz } from './quiz';
+import { avoidImmediateRepeat, buildBalancedQuiz, buildWeightedQuiz } from './quiz';
 
 type QuizItem = {
   id: string;
@@ -61,6 +61,44 @@ describe('buildBalancedQuiz', () => {
     expect(result.slice(0, 3).every(isPositive)).toBe(true);
     expect(result.filter(isPositive)).toHaveLength(3);
     expect(result.filter(item => !isPositive(item))).toHaveLength(3);
+  });
+});
+
+describe('buildWeightedQuiz', () => {
+  it('targets roughly twenty percent positive answers without duplicates', () => {
+    const items = makeItems(6, 24);
+    const result = buildWeightedQuiz(items, isPositive, 12, 0.2);
+
+    expect(result).toHaveLength(12);
+    expect(result.filter(isPositive)).toHaveLength(2);
+    expect(new Set(result.map(item => item.id)).size).toBe(12);
+  });
+
+  it('uses one positive in a six-photo quick round', () => {
+    const items = makeItems(6, 24);
+    const result = buildWeightedQuiz(items, isPositive, 6, 0.2);
+
+    expect(result).toHaveLength(6);
+    expect(result.filter(isPositive)).toHaveLength(1);
+  });
+
+  it('uses the complete archive once when the archive itself is twenty percent positive', () => {
+    const items = makeItems(6, 24);
+    const result = buildWeightedQuiz(items, isPositive, items.length, 0.2);
+
+    expect(result).toHaveLength(30);
+    expect(result.filter(isPositive)).toHaveLength(6);
+    expect(new Set(result.map(item => item.id)).size).toBe(30);
+  });
+
+  it('fully shuffles the selected answers instead of enforcing a periodic cadence', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.999999);
+    const items = makeItems(2, 8);
+    const result = buildWeightedQuiz(items, isPositive, 10, 0.2);
+
+    expect(result).toHaveLength(10);
+    expect(result.filter(isPositive)).toHaveLength(2);
+    expect(result.slice(0, 2).every(isPositive)).toBe(true);
   });
 });
 

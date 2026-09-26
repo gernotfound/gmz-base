@@ -25,6 +25,42 @@ export function buildBalancedQuiz<T>(
 }
 
 /**
+ * Builds a unique random quiz with a target share of positive answers.
+ * Selection and final order are both randomized; no periodic answer pattern is enforced.
+ */
+export function buildWeightedQuiz<T>(
+  items: readonly T[],
+  isPositive: (item: T) => boolean,
+  maxItems: number,
+  positiveShare = 0.2,
+): T[] {
+  const targetSize = Math.max(0, Math.min(items.length, Math.floor(maxItems)));
+  if (targetSize === 0) return [];
+
+  const positives = shuffle(items.filter(isPositive));
+  const negatives = shuffle(items.filter(item => !isPositive(item)));
+  const normalizedShare = Math.min(1, Math.max(0, positiveShare));
+  const desiredPositiveCount = Math.min(positives.length, Math.round(targetSize * normalizedShare));
+  const desiredNegativeCount = Math.min(negatives.length, targetSize - desiredPositiveCount);
+
+  const selected = [
+    ...positives.slice(0, desiredPositiveCount),
+    ...negatives.slice(0, desiredNegativeCount),
+  ];
+
+  if (selected.length < targetSize) {
+    selected.push(
+      ...shuffle([
+        ...positives.slice(desiredPositiveCount),
+        ...negatives.slice(desiredNegativeCount),
+      ]).slice(0, targetSize - selected.length),
+    );
+  }
+
+  return shuffle(selected);
+}
+
+/**
  * Keeps a freshly generated deck random while preventing its first item from
  * immediately repeating the item that just ended the previous deck.
  */
