@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { avoidImmediateRepeat, buildBalancedQuiz } from './quiz';
+import { avoidImmediateRepeat, buildBalancedQuiz, buildBestEffortBalancedQuiz } from './quiz';
 
 type QuizItem = {
   id: string;
@@ -60,6 +60,37 @@ describe('buildBalancedQuiz', () => {
 
     expect(result.slice(0, 3).every(isPositive)).toBe(true);
     expect(result.filter(isPositive)).toHaveLength(3);
+    expect(result.filter(item => !isPositive(item))).toHaveLength(3);
+  });
+});
+
+describe('buildBestEffortBalancedQuiz', () => {
+  it('uses all available unique items when one answer group is smaller', () => {
+    const items = makeItems(2, 1);
+    const result = buildBestEffortBalancedQuiz(items, isPositive, 6);
+
+    expect(result).toHaveLength(3);
+    expect(new Set(result.map(item => item.id)).size).toBe(3);
+    expect(result.filter(isPositive)).toHaveLength(2);
+    expect(result.filter(item => !isPositive(item))).toHaveLength(1);
+  });
+
+  it('keeps an even split when the pool can satisfy the requested size', () => {
+    const items = makeItems(6, 6);
+    const result = buildBestEffortBalancedQuiz(items, isPositive, 6);
+
+    expect(result).toHaveLength(6);
+    expect(result.filter(isPositive)).toHaveLength(3);
+    expect(result.filter(item => !isPositive(item))).toHaveLength(3);
+  });
+
+  it('fills the requested size from the larger group instead of truncating the round', () => {
+    const items = makeItems(1, 5);
+    const result = buildBestEffortBalancedQuiz(items, isPositive, 4);
+
+    expect(result).toHaveLength(4);
+    expect(new Set(result.map(item => item.id)).size).toBe(4);
+    expect(result.filter(isPositive)).toHaveLength(1);
     expect(result.filter(item => !isPositive(item))).toHaveLength(3);
   });
 });
