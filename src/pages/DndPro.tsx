@@ -3,7 +3,7 @@ import { ChevronRight, ExternalLink, Flag, Infinity as InfinityIcon, Play, Rotat
 import { Link } from 'react-router-dom';
 import GameHomeButton from '../components/GameHomeButton';
 import { dndPhotoQuestions, type DndPhotoQuestion, type PhotoDifficulty } from '../data/dnd/photoQuestions';
-import { avoidImmediateRepeat, buildBestEffortBalancedQuiz } from '../lib/quiz';
+import { buildWeightedQuiz } from '../lib/quiz';
 
 type GameState = 'setup' | 'playing' | 'end';
 type DifficultyFilter = 'misto' | PhotoDifficulty;
@@ -16,7 +16,7 @@ function getPool(difficulty: DifficultyFilter) {
 function createQuestionSet(mode: QuizMode, difficulty: DifficultyFilter): DndPhotoQuestion[] {
   const pool = getPool(difficulty);
   const desiredTotal = mode === 'rapida' ? 6 : mode === 'standard' ? 12 : pool.length;
-  return buildBestEffortBalancedQuiz(pool, question => question.isDuce, desiredTotal);
+  return buildWeightedQuiz(pool, question => question.isDuce, desiredTotal, 0.2);
 }
 
 export default function DndPro() {
@@ -35,7 +35,8 @@ export default function DndPro() {
 
   const totalQuestions = questions.length;
   const currentQuestion = questions[currentQuestionIndex];
-  const progress = totalQuestions > 0 ? ((currentQuestionIndex + (answered ? 1 : 0)) / totalQuestions) * 100 : 0;
+  const progress = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0;
+  const archiveComplete = mode === 'infinita' && gameState === 'end' && currentQuestionIndex + 1 >= totalQuestions;
   const accuracy = answeredCount > 0 ? Math.round((score / answeredCount) * 100) : 0;
   const sourceCount = useMemo(() => new Set(dndPhotoQuestions.map(question => question.sourceUrl)).size, []);
   const filteredCount = getPool(difficulty).length;
@@ -87,19 +88,6 @@ export default function DndPro() {
       return;
     }
 
-    if (mode === 'infinita') {
-      const nextQuestions = avoidImmediateRepeat(
-        createQuestionSet('infinita', difficulty),
-        currentQuestion,
-        (left, right) => left.id === right.id,
-      );
-      setQuestions(nextQuestions);
-      setCurrentQuestionIndex(0);
-      setAnswered(false);
-      setLastAnswerCorrect(null);
-      return;
-    }
-
     setGameState('end');
   };
 
@@ -140,7 +128,7 @@ export default function DndPro() {
               {([
                 ['rapida', 'Rapida', '6', Zap],
                 ['standard', 'Standard', '12', Play],
-                ['infinita', 'Infinita', '∞', InfinityIcon],
+                ['infinita', 'Infinita', 'NO REPEAT', InfinityIcon],
               ] as const).map(([value, label, sublabel, Icon]) => (
                 <button key={value} type="button" onClick={() => setMode(value)} className={`rounded-xl border px-2 py-3 text-center ${mode === value ? 'border-orange-400/35 bg-orange-500/10 text-white' : 'border-white/[0.07] bg-white/[0.03] text-slate-500'}`}>
                   <Icon className="mx-auto h-4 w-4" aria-hidden="true" />
@@ -156,7 +144,7 @@ export default function DndPro() {
                 <button key={value} type="button" onClick={() => setDifficulty(value)} className={`rounded-xl border px-2 py-3 text-xs font-black capitalize ${difficulty === value ? 'border-orange-400/35 bg-orange-500/10 text-white' : 'border-white/[0.07] bg-white/[0.03] text-slate-500'}`}>{value}</button>
               ))}
             </div>
-            <p className="mt-2 text-[10px] leading-4 text-slate-600">Il round usa tutte le foto verificate disponibili fino al limite della modalità e resta il più bilanciato possibile tra Duce e Non Duce.</p>
+            <p className="mt-2 text-[10px] leading-4 text-slate-600">Rapida e Standard usano circa il 20% di foto di Mussolini in ordine casuale. Infinita mescola tutto l’archivio e non ripete nessuna foto nella stessa sessione.</p>
 
             <button type="button" onClick={startGame} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-red-600 py-4 text-base font-black uppercase tracking-wide text-white shadow-lg shadow-orange-500/15"><Play className="h-5 w-5 fill-current" aria-hidden="true" /> Inizia</button>
           </section>
@@ -165,9 +153,9 @@ export default function DndPro() {
 
       {gameState === 'playing' && currentQuestion && (
         <main className="game-compact-header mt-12 flex w-full max-w-md flex-col items-center sm:mt-10">
-          <header className="mb-4 w-full text-center"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">Quiz fotografico · 50/50 · {mode}</p><h1 className="mt-2 text-3xl font-black tracking-[0.08em] text-white sm:text-4xl">DUCE <span className="text-orange-400">O</span> NON DUCE</h1></header>
-          <div className="mb-2.5 flex w-full items-center justify-between px-2 text-xs font-bold uppercase tracking-wider text-slate-500"><span>Foto <strong className="text-sky-400">{mode === 'infinita' ? (answered ? answeredCount : answeredCount + 1) : currentQuestionIndex + 1}</strong>{mode === 'infinita' ? '' : `/${totalQuestions}`}</span><span className="flex items-center gap-3"><span>Serie <strong className="text-orange-300">{streak}</strong></span><span>Punti <strong className="text-emerald-400">{score}</strong></span></span></div>
-          <div className="quiz-progress mb-3 w-full" aria-hidden="true"><span className="bg-gradient-to-r from-orange-400 to-red-500" style={{ width: `${progress}%` }} /></div>
+          <header className="mb-4 w-full text-center"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">Quiz fotografico · mix casuale · {mode}</p><h1 className="mt-2 text-3xl font-black tracking-[0.08em] text-white sm:text-4xl">DUCE <span className="text-orange-400">O</span> NON DUCE</h1></header>
+          <div className="mb-2.5 flex w-full items-center justify-between px-2 text-xs font-bold uppercase tracking-wider text-slate-500"><span>{mode === 'infinita' ? 'Archivio' : 'Foto'} <strong className="text-sky-400">{currentQuestionIndex + 1}</strong>{`/${totalQuestions}`}</span><span className="flex items-center gap-3"><span>Serie <strong className="text-orange-300">{streak}</strong></span><span>Punti <strong className="text-emerald-400">{score}</strong></span></span></div>
+          <div className="quiz-progress mb-3 w-full" role="progressbar" aria-label={mode === 'infinita' ? 'Copertura archivio senza ripetizioni' : 'Avanzamento partita'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><span className="bg-gradient-to-r from-orange-400 to-red-500" style={{ width: `${progress}%` }} /></div>
 
           <div className="relative flex min-h-[250px] w-full items-center justify-center overflow-hidden rounded-[2rem] border border-white/[0.08] bg-slate-900/70 p-3 shadow-2xl backdrop-blur-xl sm:min-h-[300px]">
             {!imageError ? (
@@ -212,10 +200,10 @@ export default function DndPro() {
         <section className="flex w-full max-w-md flex-col items-center justify-center text-center animate-fadeIn">
           <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl border border-orange-400/15 bg-orange-500/10 shadow-lg"><Trophy className="h-8 w-8 text-orange-300" aria-hidden="true" /></div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">Risultato Pro</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">Partita conclusa</h2>
-          <p className="mt-2 text-sm font-semibold text-slate-500">Hai risposto a {answeredCount} {answeredCount === 1 ? 'foto' : 'foto'}.</p>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">{archiveComplete ? 'Archivio completato' : 'Partita conclusa'}</h2>
+          <p className="mt-2 text-sm font-semibold text-slate-500">{archiveComplete ? `Hai visto tutte le ${totalQuestions} foto senza ripetizioni.` : `Hai risposto a ${answeredCount} foto.`}</p>
           <div className="my-6 grid w-full grid-cols-2 gap-3"><div className="rounded-[1.5rem] border border-white/[0.08] bg-slate-900/70 p-5"><p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Precisione</p><p className="mt-2 text-4xl font-black text-emerald-400">{accuracy}%</p><p className="mt-1 text-xs font-bold text-slate-600">{score}/{answeredCount || 0}</p></div><div className="rounded-[1.5rem] border border-white/[0.08] bg-slate-900/70 p-5"><p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Serie migliore</p><p className="mt-2 text-4xl font-black text-orange-300">{bestStreak}</p><p className="mt-1 text-xs font-bold text-slate-600">consecutive</p></div></div>
-          <div className="flex w-full flex-col gap-3"><button type="button" onClick={startGame} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 py-4 text-base font-black uppercase tracking-wide text-white"><RotateCcw className="h-5 w-5" aria-hidden="true" /> Gioca di nuovo</button><button type="button" onClick={() => setGameState('setup')} className="rounded-2xl border border-white/[0.07] bg-white/[0.035] py-3.5 text-xs font-black uppercase tracking-wide text-slate-400">Cambia modalità</button></div>
+          <div className="flex w-full flex-col gap-3"><button type="button" onClick={startGame} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 py-4 text-base font-black uppercase tracking-wide text-white"><RotateCcw className="h-5 w-5" aria-hidden="true" /> {mode === 'infinita' ? 'Ricomincia archivio' : 'Gioca di nuovo'}</button><button type="button" onClick={() => setGameState('setup')} className="rounded-2xl border border-white/[0.07] bg-white/[0.035] py-3.5 text-xs font-black uppercase tracking-wide text-slate-400">Cambia modalità</button></div>
         </section>
       )}
     </div>
