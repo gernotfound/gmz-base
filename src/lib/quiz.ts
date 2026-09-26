@@ -25,6 +25,46 @@ export function buildBalancedQuiz<T>(
 }
 
 /**
+ * Builds a quiz up to a requested total size while keeping the answer split as
+ * even as the available pool permits. Unlike buildBalancedQuiz, it never drops
+ * otherwise valid items merely because one answer group is smaller.
+ */
+export function buildBestEffortBalancedQuiz<T>(
+  items: readonly T[],
+  isPositive: (item: T) => boolean,
+  maxItems: number,
+): T[] {
+  const targetSize = Math.max(0, Math.min(items.length, Math.floor(maxItems)));
+  if (targetSize === 0) return [];
+
+  const positives = shuffle(items.filter(isPositive));
+  const negatives = shuffle(items.filter(item => !isPositive(item));
+  const selected: T[] = [];
+  let positiveIndex = 0;
+  let negativeIndex = 0;
+
+  while (
+    selected.length + 2 <= targetSize &&
+    positiveIndex < positives.length &&
+    negativeIndex < negatives.length
+  ) {
+    selected.push(positives[positiveIndex], negatives[negativeIndex]);
+    positiveIndex += 1;
+    negativeIndex += 1;
+  }
+
+  if (selected.length < targetSize) {
+    const leftovers = shuffle([
+      ...positives.slice(positiveIndex),
+      ...negatives.slice(negativeIndex),
+    ]);
+    selected.push(...leftovers.slice(0, targetSize - selected.length));
+  }
+
+  return shuffle(selected);
+}
+
+/**
  * Keeps a freshly generated deck random while preventing its first item from
  * immediately repeating the item that just ended the previous deck.
  */
