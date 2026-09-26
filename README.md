@@ -1,6 +1,6 @@
 # GMZ Base
 
-GMZ Base è un arcade web costruito con React, TypeScript, Vite e Tailwind CSS. Il progetto è pubblicato come PWA su GitHub Pages e usa routing hash-based, quindi ogni gioco resta raggiungibile anche su hosting statico.
+GMZ Base è un arcade web costruito con React, TypeScript, Vite e Tailwind CSS. Il progetto è pubblicato come PWA su Vercel e usa routing hash-based, così ogni gioco resta raggiungibile direttamente anche dopo refresh o installazione della PWA.
 
 ## Sviluppo
 
@@ -58,13 +58,13 @@ Qualunque carta può essere scartata durante la partita senza penalità o spiega
 
 ## Dinamiche dei quiz
 
-`src/lib/quiz.ts` costruisce set bilanciati tra le due risposte, mantenendo la casualità ma impedendo sequenze superiori a due risposte uguali. In questo modo non conviene indovinare seguendo soltanto la frequenza statistica.
+`src/lib/quiz.ts` contiene gli algoritmi condivisi di selezione casuale dei quiz. Le sequenze non seguono cadenze artificiali prevedibili; ogni gioco decide la propria distribuzione in base al design del round.
 
 `Duce o Non Duce` usa un set editoriale con autore/contesto, difficoltà e fonte consultabile. Le nuove aggiunte vanno inserite solo se l'attribuzione è verificabile; le voci dubbie o apocrife non vanno usate come domande fattuali.
 
 ## Duce o Non Duce · Pro
 
-Il gameplay Pro usa `src/data/dnd/photoQuestions.ts`: ogni domanda fotografica dichiara esplicitamente soggetto, periodo, provenienza, licenza e URL della scheda archivistica. La risposta non viene più dedotta dal prefisso del nome file.
+Il gameplay Pro usa `src/data/dnd/photoQuestions.ts`: ogni domanda fotografica dichiara esplicitamente soggetto, periodo, provenienza, licenza e URL della scheda archivistica. L'archivio verificato mantiene una quota del 20% di foto di Mussolini e la risposta non viene dedotta dal prefisso del nome file.
 
 Le vecchie immagini ottimizzate in `public/img_dndpro` restano nel repository come dataset legacy, ma non entrano nel quiz verificato finché non sono accompagnate da metadati attendibili. Le immagini verificate sono caricate dalle rispettive pagine Wikimedia Commons e richiedono rete se non sono già nella cache del browser.
 
@@ -78,4 +78,4 @@ Lo script resta un'utility tecnica di conversione WebP: la provenienza storica e
 
 ## Deploy
 
-Ogni push su `main` avvia il workflow GitHub Pages. Il workflow installa con Bun, esegue type-check + build e pubblica `dist`. Per limitare deploy superflui, le modifiche applicative vanno aggregate prima del push su `main`.
+Vercel è l'unico hosting di produzione. I branch di lavoro non devono generare Preview Deployment: `vercel.json` disabilita i deploy automatici per `**` e riabilita esplicitamente solo `main`. Ogni modifica passa da branch e pull request; il check obbligatorio `Validate` esegue TypeScript, test, build e smoke test browser prima del merge.
