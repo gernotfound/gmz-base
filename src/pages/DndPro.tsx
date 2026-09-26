@@ -3,7 +3,7 @@ import { ChevronRight, ExternalLink, Flag, Infinity as InfinityIcon, Play, Rotat
 import { Link } from 'react-router-dom';
 import GameHomeButton from '../components/GameHomeButton';
 import { dndPhotoQuestions, type DndPhotoQuestion, type PhotoDifficulty } from '../data/dnd/photoQuestions';
-import { avoidImmediateRepeat, buildBalancedQuiz } from '../lib/quiz';
+import { avoidImmediateRepeat, buildBestEffortBalancedQuiz } from '../lib/quiz';
 
 type GameState = 'setup' | 'playing' | 'end';
 type DifficultyFilter = 'misto' | PhotoDifficulty;
@@ -15,11 +15,8 @@ function getPool(difficulty: DifficultyFilter) {
 
 function createQuestionSet(mode: QuizMode, difficulty: DifficultyFilter): DndPhotoQuestion[] {
   const pool = getPool(difficulty);
-  const positives = pool.filter(question => question.isDuce).length;
-  const negatives = pool.length - positives;
-  const balancedAvailable = Math.min(positives, negatives);
-  const desiredPerSide = mode === 'rapida' ? 3 : mode === 'standard' ? 6 : balancedAvailable;
-  return buildBalancedQuiz(pool, question => question.isDuce, Math.max(1, Math.min(desiredPerSide, balancedAvailable)));
+  const desiredTotal = mode === 'rapida' ? 6 : mode === 'standard' ? 12 : pool.length;
+  return buildBestEffortBalancedQuiz(pool, question => question.isDuce, desiredTotal);
 }
 
 export default function DndPro() {
@@ -159,7 +156,7 @@ export default function DndPro() {
                 <button key={value} type="button" onClick={() => setDifficulty(value)} className={`rounded-xl border px-2 py-3 text-xs font-black capitalize ${difficulty === value ? 'border-orange-400/35 bg-orange-500/10 text-white' : 'border-white/[0.07] bg-white/[0.03] text-slate-500'}`}>{value}</button>
               ))}
             </div>
-            <p className="mt-2 text-[10px] leading-4 text-slate-600">Il round resta sempre bilanciato 50/50. Con un filtro stretto, la lunghezza si adatta al numero di foto verificate disponibili.</p>
+            <p className="mt-2 text-[10px] leading-4 text-slate-600">Il round usa tutte le foto verificate disponibili fino al limite della modalità e resta il più bilanciato possibile tra Duce e Non Duce.</p>
 
             <button type="button" onClick={startGame} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-red-600 py-4 text-base font-black uppercase tracking-wide text-white shadow-lg shadow-orange-500/15"><Play className="h-5 w-5 fill-current" aria-hidden="true" /> Inizia</button>
           </section>
