@@ -1,29 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, ExternalLink, Flag, Infinity as InfinityIcon, Play, RotateCcw, ShieldCheck, Trophy, Zap } from 'lucide-react';
+import { ChevronRight, ExternalLink, Flag, Play, RotateCcw, ShieldCheck, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import GameHomeButton from '../components/GameHomeButton';
-import { dndPhotoQuestions, type DndPhotoQuestion, type PhotoDifficulty } from '../data/dnd/photoQuestions';
-import { buildWeightedQuiz } from '../lib/quiz';
+import { dndPhotoQuestions, type DndPhotoQuestion } from '../data/dnd/photoQuestions';
+import { shuffle } from '../lib/random';
 
 type GameState = 'setup' | 'playing' | 'end';
-type DifficultyFilter = 'misto' | PhotoDifficulty;
-type QuizMode = 'rapida' | 'standard' | 'infinita';
 
-function getPool(difficulty: DifficultyFilter) {
-  return difficulty === 'misto' ? dndPhotoQuestions : dndPhotoQuestions.filter(question => question.difficulty === difficulty);
-}
-
-function createQuestionSet(mode: QuizMode, difficulty: DifficultyFilter): DndPhotoQuestion[] {
-  const pool = getPool(difficulty);
-  const desiredTotal = mode === 'rapida' ? 6 : mode === 'standard' ? 12 : pool.length;
-  return buildWeightedQuiz(pool, question => question.isDuce, desiredTotal, 0.2);
+function createQuestionSet(): DndPhotoQuestion[] {
+  return shuffle(dndPhotoQuestions);
 }
 
 export default function DndPro() {
   const [gameState, setGameState] = useState<GameState>('setup');
-  const [mode, setMode] = useState<QuizMode>('rapida');
-  const [difficulty, setDifficulty] = useState<DifficultyFilter>('misto');
-  const [questions, setQuestions] = useState(() => createQuestionSet('rapida', 'misto'));
+  const [questions, setQuestions] = useState(() => createQuestionSet());
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(false);
@@ -32,14 +22,14 @@ export default function DndPro() {
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [imageError, setImageError] = useState(false);
+  const [archiveComplete, setArchiveComplete] = useState(false);
 
   const totalQuestions = questions.length;
   const currentQuestion = questions[currentQuestionIndex];
-  const progress = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0;
-  const archiveComplete = mode === 'infinita' && gameState === 'end' && currentQuestionIndex + 1 >= totalQuestions;
+  const completedQuestions = Math.min(currentQuestionIndex + (answered ? 1 : 0), totalQuestions);
+  const progress = totalQuestions > 0 ? (completedQuestions / totalQuestions) * 100 : 0;
   const accuracy = answeredCount > 0 ? Math.round((score / answeredCount) * 100) : 0;
   const sourceCount = useMemo(() => new Set(dndPhotoQuestions.map(question => question.sourceUrl)).size, []);
-  const filteredCount = getPool(difficulty).length;
 
   useEffect(() => {
     setImageError(false);
@@ -57,11 +47,12 @@ export default function DndPro() {
   };
 
   const startGame = () => {
-    setQuestions(createQuestionSet(mode, difficulty));
+    setQuestions(createQuestionSet());
     setCurrentQuestionIndex(0);
     setAnswered(false);
     setLastAnswerCorrect(null);
     setImageError(false);
+    setArchiveComplete(false);
     resetStats();
     setGameState('playing');
   };
@@ -88,6 +79,7 @@ export default function DndPro() {
       return;
     }
 
+    setArchiveComplete(true);
     setGameState('end');
   };
 
@@ -118,33 +110,15 @@ export default function DndPro() {
             <ShieldCheck className="h-6 w-6 shrink-0 text-emerald-300" aria-hidden="true" />
             <div>
               <p className="text-xs font-black text-emerald-100">Archivio fotografico tracciato</p>
-              <p className="mt-1 text-[11px] leading-5 text-emerald-200/60">{dndPhotoQuestions.length} foto · {sourceCount} schede fonte · {filteredCount} disponibili con il filtro attuale</p>
+              <p className="mt-1 text-[11px] leading-5 text-emerald-200/60">{dndPhotoQuestions.length} foto · {sourceCount} schede fonte · archivio completo in ogni partita</p>
             </div>
           </div>
 
           <section className="w-full rounded-[2rem] border border-white/[0.08] bg-slate-900/70 p-5 shadow-2xl">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Modalità</p>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {([
-                ['rapida', 'Rapida', '6', Zap],
-                ['standard', 'Standard', '12', Play],
-                ['infinita', 'Infinita', 'NO REPEAT', InfinityIcon],
-              ] as const).map(([value, label, sublabel, Icon]) => (
-                <button key={value} type="button" onClick={() => setMode(value)} className={`rounded-xl border px-2 py-3 text-center ${mode === value ? 'border-orange-400/35 bg-orange-500/10 text-white' : 'border-white/[0.07] bg-white/[0.03] text-slate-500'}`}>
-                  <Icon className="mx-auto h-4 w-4" aria-hidden="true" />
-                  <span className="mt-1 block text-xs font-black">{label}</span>
-                  <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-wide opacity-60">{sublabel}</span>
-                </button>
-              ))}
+            <div className="rounded-2xl border border-orange-400/15 bg-orange-500/[0.07] p-4 text-left">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-300">Modalità unica</p>
+              <p className="mt-2 text-xs leading-5 text-slate-400">Ogni partita usa tutte le {dndPhotoQuestions.length} foto dell’archivio in ordine casuale, senza ripetizioni. L’archivio mantiene il 20% di foto di Mussolini e l’80% di falsi positivi verificati.</p>
             </div>
-
-            <p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Difficoltà</p>
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {(['misto', 'base', 'medio', 'difficile'] as DifficultyFilter[]).map(value => (
-                <button key={value} type="button" onClick={() => setDifficulty(value)} className={`rounded-xl border px-2 py-3 text-xs font-black capitalize ${difficulty === value ? 'border-orange-400/35 bg-orange-500/10 text-white' : 'border-white/[0.07] bg-white/[0.03] text-slate-500'}`}>{value}</button>
-              ))}
-            </div>
-            <p className="mt-2 text-[10px] leading-4 text-slate-600">Rapida e Standard usano circa il 20% di foto di Mussolini in ordine casuale. Infinita mescola tutto l’archivio e non ripete nessuna foto nella stessa sessione.</p>
 
             <button type="button" onClick={startGame} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-red-600 py-4 text-base font-black uppercase tracking-wide text-white shadow-lg shadow-orange-500/15"><Play className="h-5 w-5 fill-current" aria-hidden="true" /> Inizia</button>
           </section>
@@ -153,9 +127,9 @@ export default function DndPro() {
 
       {gameState === 'playing' && currentQuestion && (
         <main className="game-compact-header mt-12 flex w-full max-w-md flex-col items-center sm:mt-10">
-          <header className="mb-4 w-full text-center"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">Quiz fotografico · mix casuale · {mode}</p><h1 className="mt-2 text-3xl font-black tracking-[0.08em] text-white sm:text-4xl">DUCE <span className="text-orange-400">O</span> NON DUCE</h1></header>
-          <div className="mb-2.5 flex w-full items-center justify-between px-2 text-xs font-bold uppercase tracking-wider text-slate-500"><span>{mode === 'infinita' ? 'Archivio' : 'Foto'} <strong className="text-sky-400">{currentQuestionIndex + 1}</strong>{`/${totalQuestions}`}</span><span className="flex items-center gap-3"><span>Serie <strong className="text-orange-300">{streak}</strong></span><span>Punti <strong className="text-emerald-400">{score}</strong></span></span></div>
-          <div className="quiz-progress mb-3 w-full" role="progressbar" aria-label={mode === 'infinita' ? 'Copertura archivio senza ripetizioni' : 'Avanzamento partita'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><span className="bg-gradient-to-r from-orange-400 to-red-500" style={{ width: `${progress}%` }} /></div>
+          <header className="mb-4 w-full text-center"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">Quiz fotografico · archivio completo · no repeat</p><h1 className="mt-2 text-3xl font-black tracking-[0.08em] text-white sm:text-4xl">DUCE <span className="text-orange-400">O</span> NON DUCE</h1></header>
+          <div className="mb-2.5 flex w-full items-center justify-between px-2 text-xs font-bold uppercase tracking-wider text-slate-500"><span>Foto <strong className="text-sky-400">{currentQuestionIndex + 1}</strong>{`/${totalQuestions}`}</span><span className="flex items-center gap-3"><span>Serie <strong className="text-orange-300">{streak}</strong></span><span>Punti <strong className="text-emerald-400">{score}</strong></span></span></div>
+          <div className="quiz-progress mb-3 w-full" role="progressbar" aria-label="Avanzamento archivio" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><span className="bg-gradient-to-r from-orange-400 to-red-500" style={{ width: `${progress}%` }} /></div>
 
           <div className="relative flex min-h-[250px] w-full items-center justify-center overflow-hidden rounded-[2rem] border border-white/[0.08] bg-slate-900/70 p-3 shadow-2xl backdrop-blur-xl sm:min-h-[300px]">
             {!imageError ? (
@@ -188,9 +162,9 @@ export default function DndPro() {
             {imageError ? (
               <button type="button" onClick={advance} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] py-3.5 text-xs font-black uppercase tracking-wide text-slate-300">Salta foto <ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
             ) : answered ? (
-              <button type="button" onClick={advance} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 py-4 text-base font-black uppercase tracking-wide text-white">{mode !== 'infinita' && currentQuestionIndex + 1 >= totalQuestions ? 'Vedi risultato' : 'Prossima foto'} <ChevronRight className="h-5 w-5" aria-hidden="true" /></button>
+              <button type="button" onClick={advance} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 py-4 text-base font-black uppercase tracking-wide text-white">{currentQuestionIndex + 1 >= totalQuestions ? 'Vedi risultato' : 'Prossima foto'} <ChevronRight className="h-5 w-5" aria-hidden="true" /></button>
             ) : (
-              <button type="button" onClick={() => setGameState('end')} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.035] py-3.5 text-xs font-black uppercase tracking-wider text-slate-500"><Flag className="h-3.5 w-3.5" aria-hidden="true" /> Termina partita</button>
+              <button type="button" onClick={() => { setArchiveComplete(false); setGameState('end'); }} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.035] py-3.5 text-xs font-black uppercase tracking-wider text-slate-500"><Flag className="h-3.5 w-3.5" aria-hidden="true" /> Termina partita</button>
             )}
           </div>
         </main>
@@ -201,9 +175,9 @@ export default function DndPro() {
           <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl border border-orange-400/15 bg-orange-500/10 shadow-lg"><Trophy className="h-8 w-8 text-orange-300" aria-hidden="true" /></div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">Risultato Pro</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">{archiveComplete ? 'Archivio completato' : 'Partita conclusa'}</h2>
-          <p className="mt-2 text-sm font-semibold text-slate-500">{archiveComplete ? `Hai visto tutte le ${totalQuestions} foto senza ripetizioni.` : `Hai risposto a ${answeredCount} foto.`}</p>
+          <p className="mt-2 text-sm font-semibold text-slate-500">{archiveComplete ? `Hai completato tutte le ${totalQuestions} schede senza ripetizioni.` : `Hai risposto a ${answeredCount} foto.`}</p>
           <div className="my-6 grid w-full grid-cols-2 gap-3"><div className="rounded-[1.5rem] border border-white/[0.08] bg-slate-900/70 p-5"><p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Precisione</p><p className="mt-2 text-4xl font-black text-emerald-400">{accuracy}%</p><p className="mt-1 text-xs font-bold text-slate-600">{score}/{answeredCount || 0}</p></div><div className="rounded-[1.5rem] border border-white/[0.08] bg-slate-900/70 p-5"><p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Serie migliore</p><p className="mt-2 text-4xl font-black text-orange-300">{bestStreak}</p><p className="mt-1 text-xs font-bold text-slate-600">consecutive</p></div></div>
-          <div className="flex w-full flex-col gap-3"><button type="button" onClick={startGame} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 py-4 text-base font-black uppercase tracking-wide text-white"><RotateCcw className="h-5 w-5" aria-hidden="true" /> {mode === 'infinita' ? 'Ricomincia archivio' : 'Gioca di nuovo'}</button><button type="button" onClick={() => setGameState('setup')} className="rounded-2xl border border-white/[0.07] bg-white/[0.035] py-3.5 text-xs font-black uppercase tracking-wide text-slate-400">Cambia modalità</button></div>
+          <div className="flex w-full flex-col gap-3"><button type="button" onClick={startGame} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 py-4 text-base font-black uppercase tracking-wide text-white"><RotateCcw className="h-5 w-5" aria-hidden="true" /> Gioca di nuovo</button><button type="button" onClick={() => setGameState('setup')} className="rounded-2xl border border-white/[0.07] bg-white/[0.035] py-3.5 text-xs font-black uppercase tracking-wide text-slate-400">Torna all’inizio</button></div>
         </section>
       )}
     </div>

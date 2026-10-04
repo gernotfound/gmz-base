@@ -33,19 +33,16 @@ test('unknown routes render the not-found page and noindex metadata', async ({ p
 });
 
 
-test('Duce Pro uses full round lengths and archive progress without resets', async ({ page }) => {
+test('Duce Pro exposes one complete archive mode with correct progress semantics', async ({ page }) => {
   await page.goto('/#/dnd-pro');
 
-  await page.getByRole('button', { name: 'difficile' }).click();
-  await page.getByRole('button', { name: 'Inizia' }).click();
-  await expect(page.getByText(/Foto\s+1\/6/i)).toBeVisible();
-  await expect(page.getByRole('progressbar', { name: 'Avanzamento partita' })).toHaveAttribute('aria-valuenow', '17');
+  await expect(page.getByText('Modalità unica')).toBeVisible();
+  await expect(page.getByText('Difficoltà')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Rapida/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Standard/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Infinita/i })).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Termina partita' }).click();
-  await page.getByRole('button', { name: 'Cambia modalità' }).click();
-  await page.getByRole('button', { name: /Infinita/i }).click();
   await page.getByRole('button', { name: 'Inizia' }).click();
-
-  await expect(page.getByText(/Archivio\s+1\/10/i)).toBeVisible();
-  await expect(page.getByRole('progressbar', { name: 'Copertura archivio senza ripetizioni' })).toHaveAttribute('aria-valuenow', '10');
+  await expect(page.getByText(/Foto\s+1\/35/i)).toBeVisible();
+  await expect(page.getByRole('progressbar', { name: 'Avanzamento archivio' })).toHaveAttribute('aria-valuenow', '0');
 });

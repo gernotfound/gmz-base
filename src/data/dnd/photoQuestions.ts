@@ -1,5 +1,3 @@
-export type PhotoDifficulty = 'base' | 'medio' | 'difficile';
-
 export interface DndPhotoQuestion {
   id: string;
   imageUrl: string;
@@ -10,7 +8,6 @@ export interface DndPhotoQuestion {
   sourceLabel: string;
   sourceUrl: string;
   license: string;
-  difficulty: PhotoDifficulty;
 }
 
 function commonsImage(filename: string) {
@@ -28,7 +25,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Benito Mussolini 1922',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Benito_Mussolini_1922.jpeg',
     license: 'Pubblico dominio',
-    difficulty: 'base',
   },
   {
     id: 'mussolini-march-rome',
@@ -40,7 +36,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Benito Mussolini 1920s',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Benito_Mussolini_1920s.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'medio',
   },
   {
     id: 'mussolini-1930',
@@ -52,7 +47,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Benito Mussolini 1930',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Benito_Mussolini_1930.png',
     license: 'Pubblico dominio',
-    difficulty: 'base',
   },
   {
     id: 'mussolini-1935',
@@ -64,7 +58,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Benito mussolini',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Benito_mussolini.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'medio',
   },
   {
     id: 'mussolini-hitler-1937',
@@ -76,7 +69,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Mussolini 1930s',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Benito_Mussolini_1930s.jpg',
     license: 'Pubblico dominio · fonte USHMM',
-    difficulty: 'difficile',
   },
   {
     id: 'mussolini-1940',
@@ -88,7 +80,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Mussolini 1940',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Mussolini_1940_(retouched).jpg',
     license: 'Pubblico dominio',
-    difficulty: 'difficile',
   },
   {
     id: 'churchill-1941',
@@ -100,7 +91,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Winston Churchill 1941',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Winston_Churchill_cph.3a49758.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'base',
   },
   {
     id: 'roosevelt-1933',
@@ -112,7 +102,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · F. D. Roosevelt 1933',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Franklin_Delano_Roosevelt,_Portrait_1933.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'base',
   },
   {
     id: 'franco-1930',
@@ -124,7 +113,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Francisco Franco 1930',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Francisco_Franco_1930_Portrait.jpg',
     license: 'CC0 1.0',
-    difficulty: 'medio',
   },
   {
     id: 'de-gaulle-1920',
@@ -136,7 +124,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Charles de Gaulle 1920',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Charles_de_Gaulle_en_1920.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'difficile',
   },
   {
     id: 'hitler-1937',
@@ -148,7 +135,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Adolf Hitler 1937',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Adolf_Hitler_1937.jpg',
     license: 'Pubblico dominio · fonte USHMM',
-    difficulty: 'medio',
   },
   {
     id: 'kennedy-portrait',
@@ -160,7 +146,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · John F. Kennedy',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:John_F_Kennedy_Official_Portrait.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'base',
   },
   {
     id: 'chamberlain-1936',
@@ -172,7 +157,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Neville Chamberlain 1936',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Neville-Chamberlain.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'base',
   },
   {
     id: 'truman-1945-color',
@@ -184,7 +168,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Truman color portrait',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Truman_color_portrait.jpg',
     license: 'Pubblico dominio · U.S. Army',
-    difficulty: 'base',
   },
   {
     id: 'macarthur-1945',
@@ -196,7 +179,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Douglas MacArthur 1945',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Portrait_of_General_Douglas_MacArthur.jpg',
     license: 'Pubblico dominio · U.S. Government',
-    difficulty: 'base',
   },
   {
     id: 'patton-1943',
@@ -208,7 +190,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · George S. Patton',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:George_Smith_Patton_-_1944.jpg',
     license: 'Pubblico dominio · U.S. Army',
-    difficulty: 'base',
   },
   {
     id: 'balbo-portrait',
@@ -220,7 +201,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Italo Balbo portrait',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Italo_Balbo_portrait.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'base',
   },
   {
     id: 'badoglio-1940',
@@ -232,7 +212,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Pietro Badoglio',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Pietro_Badoglio.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'medio',
   },
   {
     id: 'ciano-1933',
@@ -244,7 +223,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Galeazzo Ciano 1933',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Gian_Galeazzo_Ciano_(Portrait).jpg',
     license: 'CC0 1.0',
-    difficulty: 'medio',
   },
   {
     id: 'dannunzio-pre1938',
@@ -256,7 +234,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: "Wikimedia Commons · Gabriele d'Annunzio",
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Gabriele_d%27Annunzio01.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'medio',
   },
   {
     id: 'stalin-1943',
@@ -268,7 +245,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Stalin in 1943',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Stalin_in_1943.png',
     license: 'Pubblico dominio · U.S. Army',
-    difficulty: 'medio',
   },
   {
     id: 'chiang-1940',
@@ -280,7 +256,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Chiang Kai-shek 1940',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Chiang_Kai-shek_in_full_uniform.jpeg',
     license: 'Pubblico dominio',
-    difficulty: 'medio',
   },
   {
     id: 'roosevelt-1944',
@@ -292,7 +267,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Franklin D. Roosevelt 1944',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Franklin--delano-roosevelt-.jpg',
     license: 'Pubblico dominio · U.S. Government',
-    difficulty: 'medio',
   },
   {
     id: 'himmler-1938',
@@ -304,7 +278,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Bundesarchiv · Himmler 1938',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Heinrich_Himmler_1938_SS_Portrait_(3x4_close_cropped).jpg',
     license: 'CC BY-SA 3.0 DE · Bundesarchiv',
-    difficulty: 'difficile',
   },
   {
     id: 'kesselring-1941',
@@ -316,7 +289,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Albert Kesselring 1941',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Albert_Kesselring_in_1941.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'difficile',
   },
   {
     id: 'hitler-1938-alt',
@@ -328,7 +300,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Adolf Hitler 1938 portrait',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Adolf_Hitler_1938_Portrait_(3x4_cropped).jpg',
     license: 'Pubblico dominio',
-    difficulty: 'difficile',
   },
   {
     id: 'churchill-h16645',
@@ -340,7 +311,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · IWM H16645',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Winston_Churchill_As_Prime_Minister_1940-1945_H16645.jpg',
     license: 'Pubblico dominio · UK Government',
-    difficulty: 'difficile',
   },
   {
     id: 'churchill-h10688',
@@ -352,7 +322,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · IWM H10688',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Winston_Churchill_As_Prime_Minister_1940-45_H10688.jpg',
     license: 'Pubblico dominio · UK Government',
-    difficulty: 'difficile',
   },
   {
     id: 'kesselring-portrait',
@@ -364,7 +333,6 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Albert Kesselring portrait',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Albert_Kesselring_portrait.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'difficile',
   },
   {
     id: 'hitler-portrait-alt',
@@ -376,6 +344,60 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Adolf Hitler Portrait',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Adolf_Hitler_Portrait.jpg',
     license: 'Pubblico dominio',
-    difficulty: 'difficile',
+  },
+  {
+    id: 'mussolini-1937-1940',
+    imageUrl: commonsImage('Duce Benito Mussolini.jpg'),
+    isDuce: true,
+    subject: 'Benito Mussolini',
+    year: '1937–1940',
+    context: 'Ritratto fotografico di Mussolini in uniforme, datato da Wikimedia Commons tra il 1937 e il 1940.',
+    sourceLabel: 'Wikimedia Commons · Duce Benito Mussolini',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Duce_Benito_Mussolini.jpg',
+    license: 'Pubblico dominio',
+  },
+  {
+    id: 'vittorio-emanuele-iii-1930',
+    imageUrl: commonsImage('Vittorio Emanuele III (c. 1924-1934).jpg'),
+    isDuce: false,
+    subject: 'Vittorio Emanuele III',
+    year: 'circa 1924–1932',
+    context: 'Cartolina fotografica di Vittorio Emanuele III circolata in Italia intorno al 1930 e conservata su Wikimedia Commons.',
+    sourceLabel: 'Wikimedia Commons · Vittorio Emanuele III',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Vittorio_Emanuele_III_(c._1924-1934).jpg',
+    license: 'Pubblico dominio',
+  },
+  {
+    id: 'dino-grandi-1925',
+    imageUrl: commonsImage('Dino Grandi (cropped).jpg'),
+    isDuce: false,
+    subject: 'Dino Grandi',
+    year: 'circa 1925',
+    context: 'Ritratto del politico fascista Dino Grandi proveniente dal Bundesarchiv tedesco; non è Benito Mussolini.',
+    sourceLabel: 'Wikimedia Commons · Bundesarchiv · Dino Grandi',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Dino_Grandi_(cropped).jpg',
+    license: 'CC BY-SA 3.0 DE · Bundesarchiv',
+  },
+  {
+    id: 'montgomery-1944',
+    imageUrl: commonsImage('Field Marshal Sir Bernard Montgomery, 1944 TR2721.jpg'),
+    isDuce: false,
+    subject: 'Bernard Montgomery',
+    year: '1944',
+    context: 'Ritratto del feldmaresciallo britannico Bernard Montgomery realizzato nel 1944 e conservato dall’Imperial War Museums.',
+    sourceLabel: 'Wikimedia Commons · IWM TR2721',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Field_Marshal_Sir_Bernard_Montgomery,_1944_TR2721.jpg',
+    license: 'Pubblico dominio · UK Government',
+  },
+  {
+    id: 'eisenhower-1943',
+    imageUrl: commonsImage('Dwight D Eisenhower.jpg'),
+    isDuce: false,
+    subject: 'Dwight D. Eisenhower',
+    year: '1943',
+    context: 'Ritratto di Dwight D. Eisenhower come generale dell’esercito statunitense, datato 31 dicembre 1943.',
+    sourceLabel: 'Wikimedia Commons · U.S. Army · Eisenhower',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Dwight_D_Eisenhower.jpg',
+    license: 'Pubblico dominio · U.S. Army',
   },
 ] as const;
