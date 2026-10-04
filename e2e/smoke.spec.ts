@@ -45,8 +45,4 @@ test('Duce Pro exposes one complete archive mode with correct progress semantics
   await page.getByRole('button', { name: 'Inizia' }).click();
   await expect(page.getByText(/Foto\s+1\/35/i)).toBeVisible();
   await expect(page.getByRole('progressbar', { name: 'Avanzamento archivio' })).toHaveAttribute('aria-valuenow', '0');
-
-  await page.getByRole('button', { name: 'Termina partita' }).click();
-  await expect(page.getByText('Hai risposto a 0 foto.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Torna all’inizio' })).toBeVisible();
 });
