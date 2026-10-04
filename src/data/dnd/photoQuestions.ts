@@ -344,7 +344,7 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · Adolf Hitler Portrait',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Adolf_Hitler_Portrait.jpg',
     license: 'Pubblico dominio',
-  },,
+  },
   {
     id: 'mussolini-1937-1940',
     imageUrl: commonsImage('Duce Benito Mussolini.jpg'),
@@ -399,5 +399,5 @@ export const dndPhotoQuestions: readonly DndPhotoQuestion[] = [
     sourceLabel: 'Wikimedia Commons · U.S. Army · Eisenhower',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Dwight_D_Eisenhower.jpg',
     license: 'Pubblico dominio · U.S. Army',
-  }
+  },
 ] as const;
