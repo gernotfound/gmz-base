@@ -3,12 +3,12 @@ import { ChevronRight, ExternalLink, Flag, Play, RotateCcw, ShieldCheck, Trophy 
 import { Link } from 'react-router-dom';
 import GameHomeButton from '../components/GameHomeButton';
 import { dndPhotoQuestions, type DndPhotoQuestion } from '../data/dnd/photoQuestions';
-import { buildWeightedQuiz } from '../lib/quiz';
+import { shuffle } from '../lib/random';
 
 type GameState = 'setup' | 'playing' | 'end';
 
 function createQuestionSet(): DndPhotoQuestion[] {
-  return buildWeightedQuiz(dndPhotoQuestions, question => question.isDuce, dndPhotoQuestions.length, 0.2);
+  return shuffle(dndPhotoQuestions);
 }
 
 export default function DndPro() {
@@ -117,7 +117,7 @@ export default function DndPro() {
           <section className="w-full rounded-[2rem] border border-white/[0.08] bg-slate-900/70 p-5 shadow-2xl">
             <div className="rounded-2xl border border-orange-400/15 bg-orange-500/[0.07] p-4 text-left">
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-300">Modalità unica</p>
-              <p className="mt-2 text-xs leading-5 text-slate-400">Ogni partita usa tutte le {dndPhotoQuestions.length} foto dell’archivio in ordine casuale, senza ripetizioni. La quota Duce resta circa al 20% perché l’archivio completo contiene tutte le foto verificate.</p>
+              <p className="mt-2 text-xs leading-5 text-slate-400">Ogni partita usa tutte le {dndPhotoQuestions.length} foto dell’archivio in ordine casuale, senza ripetizioni. L’archivio mantiene il 20% di foto di Mussolini e l’80% di falsi positivi verificati.</p>
             </div>
 
             <button type="button" onClick={startGame} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-red-600 py-4 text-base font-black uppercase tracking-wide text-white shadow-lg shadow-orange-500/15"><Play className="h-5 w-5 fill-current" aria-hidden="true" /> Inizia</button>
@@ -175,7 +175,7 @@ export default function DndPro() {
           <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl border border-orange-400/15 bg-orange-500/10 shadow-lg"><Trophy className="h-8 w-8 text-orange-300" aria-hidden="true" /></div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300">Risultato Pro</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">{archiveComplete ? 'Archivio completato' : 'Partita conclusa'}</h2>
-          <p className="mt-2 text-sm font-semibold text-slate-500">{archiveComplete ? `Hai visto tutte le ${totalQuestions} foto senza ripetizioni.` : `Hai risposto a ${answeredCount} foto.`}</p>
+          <p className="mt-2 text-sm font-semibold text-slate-500">{archiveComplete ? `Hai completato tutte le ${totalQuestions} schede senza ripetizioni.` : `Hai risposto a ${answeredCount} foto.`}</p>
           <div className="my-6 grid w-full grid-cols-2 gap-3"><div className="rounded-[1.5rem] border border-white/[0.08] bg-slate-900/70 p-5"><p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Precisione</p><p className="mt-2 text-4xl font-black text-emerald-400">{accuracy}%</p><p className="mt-1 text-xs font-bold text-slate-600">{score}/{answeredCount || 0}</p></div><div className="rounded-[1.5rem] border border-white/[0.08] bg-slate-900/70 p-5"><p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">Serie migliore</p><p className="mt-2 text-4xl font-black text-orange-300">{bestStreak}</p><p className="mt-1 text-xs font-bold text-slate-600">consecutive</p></div></div>
           <div className="flex w-full flex-col gap-3"><button type="button" onClick={startGame} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 py-4 text-base font-black uppercase tracking-wide text-white"><RotateCcw className="h-5 w-5" aria-hidden="true" /> Gioca di nuovo</button><button type="button" onClick={() => setGameState('setup')} className="rounded-2xl border border-white/[0.07] bg-white/[0.035] py-3.5 text-xs font-black uppercase tracking-wide text-slate-400">Torna all’inizio</button></div>
         </section>
